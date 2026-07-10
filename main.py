@@ -34,14 +34,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.ACpushButton.pressed.connect(self.AC_press)
 
     def DC_press(self):
-        new_window = DC.gui.MainWindow()
-        new_window.show()
-        self.close()
+        self.new_window = DC.gui.MainWindow()
+        self.new_window.show()
+        # self.close()
 
     def AC_press(self):
-        new_window = AC.gui.MainWindow()
-        new_window.show()
-        self.close()
+        self.new_window = AC.gui.MainWindow()
+        self.new_window.show()
+        # self.close()
 
 if __name__ == "__main__":
     main()
