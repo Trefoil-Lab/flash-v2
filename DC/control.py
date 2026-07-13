@@ -8,8 +8,9 @@ import datetime
 from threading import Thread, Lock, Event
 from queue import SimpleQueue, Empty
 
-from .interface import DCSupply
-from .util import Params, ControlSignals, SampleSignals, GuiSignals, Status
+from control.control import Status
+from control.supply import DCSupply
+from util.signals import Params, ControlSignals, SampleSignals, GuiSignals
 
 RAMP_INTERVAL_S = 0.200
 SAVE_INTERVAL_S = 10

@@ -17,14 +17,17 @@ import numpy as np
 import os
 import datetime
 
-from .MainWindow import Ui_MainWindow
+from .DCMainWindow import Ui_MainWindow
 from .ConnectDialog import Ui_Dialog
-from .util import GuiSignals, ControlSignals, Params, RampData
-from .control import ControlRunner
+from util.signals import GuiSignals, ControlSignals, Params, RampData
+from control.control import ControlRunner
+from util.const import (
+    DC_SOURCE_ADDR,
+    SupplyType,
+)
 
-DC_SOURCE_ADDR = "USB0::0x3121::0x1004::615E25116::INSTR"
 
-WINDOW_TITLE = 'flash-v1'
+WINDOW_TITLE = 'DC flash'
 CONNECTION_DIALOG_TITLE = 'connection dialog'
 
 E_FIELD_COLOR_STR = '#00FFFF'
@@ -55,7 +58,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # set up control thread
         self.signals = GuiSignals()
         self.threadpool = QThreadPool()
-        self.control_thread = ControlRunner(DC_SOURCE_ADDR, self.signals, 
+        self.control_thread = ControlRunner(self.signals, 
                                             Params(
                                                 ramp_data=RampData(
                                                     ramp=self.currentDensityModeComboBox.currentText == 'Ramp',
@@ -68,7 +71,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                                 diameter=self.diameterCmDoubleSpinBox.value(),
                                                 height=self.heightCmDoubleSpinBox.value(),
                                                 sample_interval=self.sampleRateDoubleSpinBox.value()
-                                            ))
+                                            ),
+                                            SupplyType.DC
+        )
         
         # set up control signal listeners
         self.control_thread.signals.newDataSig.connect(self.receiveData)
@@ -377,7 +382,7 @@ class ConnectDialog(Ui_Dialog, QDialog):
         filepath = os.path.join(folder, filename)
         print(filepath)
 
-        self.gui_signals.connectSig.emit(filepath)
+        self.gui_signals.connectSig.emit(DC_SOURCE_ADDR, filepath)
 
         return super().accept()
     

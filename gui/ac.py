@@ -18,14 +18,18 @@ import os
 import math
 import datetime
 
-from .MainWindow import Ui_MainWindow
+from .ACMainWindow import Ui_MainWindow
 from .ConnectDialog import Ui_Dialog
-from .util import GuiSignals, ControlSignals, Params, RampData
-from .control import ControlRunner
+from util.signals import GuiSignals, ControlSignals, Params, RampData
+from control.control import ControlRunner
+from util.const import (
+    AC_SOURCE_ADDR,
+    SupplyType
+)
 
 DC_SOURCE_ADDR = "USB0::0xFFFF::0x7749::581H24111::INSTR"
 
-WINDOW_TITLE = 'flash-v1-AC'
+WINDOW_TITLE = 'AC flash'
 CONNECTION_DIALOG_TITLE = 'connection dialog'
 
 E_FIELD_COLOR_STR = '#00FFFF'
@@ -56,7 +60,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # set up control thread
         self.signals = GuiSignals()
         self.threadpool = QThreadPool()
-        self.control_thread = ControlRunner(DC_SOURCE_ADDR, self.signals, 
+        self.control_thread = ControlRunner(self.signals, 
                                             Params(
                                                 ramp_data=RampData(
                                                     ramp=self.currentDensityModeComboBox.currentText == 'Ramp',
@@ -70,7 +74,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                                                 diameter=self.diameterCmDoubleSpinBox.value(),
                                                 height=self.heightCmDoubleSpinBox.value(),
                                                 sample_interval=self.sampleRateDoubleSpinBox.value()
-                                            ))
+                                            ),
+                                            SupplyType.AC
+                                            )
         
         # set up control signal listeners
         self.control_thread.signals.newDataSig.connect(self.receiveData)
@@ -282,7 +288,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         
         self.readoutV.setText(f'V={data[5]}')
         self.readoutI.setText(f'I={data[6]}')
-        self.readoutS.setText(f'S={data[7]}<{math.degrees(math.atan2(data[8],data[9]))}={data[8]}+{data[9]}j')
+        # TODO fix this
+        # self.readoutS.setText(f'S={data[7]}<{math.degrees(math.atan2(data[8],data[9]))}={data[8]}+{data[9]}j')
 
     def connecting(self):
         self.statusbar.showMessage('Connecting...')
@@ -386,7 +393,7 @@ class ConnectDialog(Ui_Dialog, QDialog):
         filepath = os.path.join(folder, filename)
         print(filepath)
 
-        self.gui_signals.connectSig.emit(filepath)
+        self.gui_signals.connectSig.emit(AC_SOURCE_ADDR, filepath)
 
         return super().accept()
     

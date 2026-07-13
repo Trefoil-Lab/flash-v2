@@ -2,11 +2,6 @@ from dataclasses import dataclass
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
 @dataclass
-class Status:
-    connected : bool = False
-    running : bool = False
-
-@dataclass
 class RampData:
     ramp: bool
     start: float
@@ -18,13 +13,13 @@ class Params:
     ramp_data: RampData | None
     e_field: float
     curr_density: float
-    freq: float
     diameter: float
     height: float
     sample_interval: float
+    freq: float | None = None
 
 class GuiSignals(QObject):
-    connectSig = pyqtSignal(str)
+    connectSig = pyqtSignal(str, str) # addr, filepath
     disconnectSig = pyqtSignal()
     setParamsSig = pyqtSignal(Params)
     startSig = pyqtSignal()

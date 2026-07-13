@@ -3,12 +3,11 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
 )
-from MainWindow import Ui_MainWindow
-import DC.gui
-import AC.gui
+from gui.LauncherMainWindow import Ui_MainWindow
+import gui.dc
+import gui.ac
 
 MAIN_WINDOW_TITLE = 'flash-v1'
-
 
 def main():
     app = QApplication(sys.argv)
@@ -28,19 +27,22 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         ###############################
 
         self.setWindowTitle(MAIN_WINDOW_TITLE)
+        self.windows = []
 
         # connect buttons to handlers
         self.DCpushButton.pressed.connect(self.DC_press)
         self.ACpushButton.pressed.connect(self.AC_press)
 
     def DC_press(self):
-        self.new_window = DC.gui.MainWindow()
-        self.new_window.show()
+        new_window = gui.dc.MainWindow()
+        new_window.show()
+        self.windows.append(new_window)
         # self.close()
 
     def AC_press(self):
-        self.new_window = AC.gui.MainWindow()
-        self.new_window.show()
+        new_window = gui.ac.MainWindow()
+        new_window.show()
+        self.windows.append(new_window)
         # self.close()
 
 if __name__ == "__main__":

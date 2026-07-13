@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>334</width>
-    <height>313</height>
+    <width>286</width>
+    <height>144</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="sizePolicy">
-    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
      <horstretch>0</horstretch>
      <verstretch>0</verstretch>
     </sizepolicy>
@@ -28,7 +28,7 @@
       </property>
       <property name="sizeHint" stdset="0">
        <size>
-        <width>40</width>
+        <width>0</width>
         <height>20</height>
        </size>
       </property>
@@ -44,7 +44,7 @@
         <property name="sizeHint" stdset="0">
          <size>
           <width>20</width>
-          <height>40</height>
+          <height>0</height>
          </size>
         </property>
        </spacer>
@@ -83,7 +83,7 @@
         <property name="sizeHint" stdset="0">
          <size>
           <width>20</width>
-          <height>40</height>
+          <height>0</height>
          </size>
         </property>
        </spacer>
@@ -97,7 +97,7 @@
       </property>
       <property name="sizeHint" stdset="0">
        <size>
-        <width>40</width>
+        <width>0</width>
         <height>20</height>
        </size>
       </property>
@@ -110,7 +110,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>334</width>
+     <width>286</width>
      <height>33</height>
     </rect>
    </property>
