@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
+from util.data import (
+    SamplerData,
+)
+
+
 @dataclass
 class RampData:
     ramp: bool
@@ -27,10 +32,10 @@ class GuiSignals(QObject):
     exitSig = pyqtSignal()
 
 class SampleSignals(QObject):
-    newDataSig = pyqtSignal(tuple) # (time, V, I, P, T)
+    newDataSig = pyqtSignal(SamplerData)
 
 class ControlSignals(QObject):
-    newDataSig = pyqtSignal(tuple) # (time, E, J, P, T)
+    newDataSig = pyqtSignal(SamplerData)
 
     connectingSig = pyqtSignal()
     connectedSig = pyqtSignal()

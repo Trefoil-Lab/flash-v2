@@ -16,6 +16,7 @@ import pyqtgraph as pg
 import numpy as np
 import os
 import math
+import cmath
 import datetime
 
 from .ACMainWindow import Ui_MainWindow
@@ -26,8 +27,11 @@ from util.const import (
     AC_SOURCE_ADDR,
     SupplyType
 )
+from util.data import (
+    SamplerData,
+    ACPayload
+)
 
-DC_SOURCE_ADDR = "USB0::0xFFFF::0x7749::581H24111::INSTR"
 
 WINDOW_TITLE = 'AC flash'
 CONNECTION_DIALOG_TITLE = 'connection dialog'
@@ -269,13 +273,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # control signal handlers #
     ###########################
 
-    def receiveData(self, data : tuple[float]):
-        # (time, E, J, P, T, V, I, |S|, P, Q)
-        self.time.append(data[0])
-        self.E.append(data[1])
-        self.J.append(data[2])
-        self.P.append(data[3])
-        self.T.append(data[4])
+    def receiveData(self, data : SamplerData):
+        self.time.append(data.delta_time)
+        self.E.append(data.e_field)
+        self.J.append(data.curr_density)
+        self.P.append(data.power_density)
+        self.T.append(data.temperature)
 
         self.graph1.getPlotItem().removeItem(self.EPlotItem)
         self.graph1.getPlotItem().removeItem(self.JPlotItem)
@@ -286,10 +289,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.PPlotItem = self.graph2.plot(self.time, self.P, pen=pg.mkPen(color=POWER_DENSITY_COLOR_STR))
         self.TPlotItem = self.graph2.plot(self.time, self.T, pen=pg.mkPen(color=TEMPERATURE_COLOR_STR))
         
-        self.readoutV.setText(f'V={data[5]}')
-        self.readoutI.setText(f'I={data[6]}')
-        # TODO fix this
-        # self.readoutS.setText(f'S={data[7]}<{math.degrees(math.atan2(data[8],data[9]))}={data[8]}+{data[9]}j')
+        self.readoutV.setText(f'V={data.voltage}')
+        self.readoutI.setText(f'I={data.current}')
+        try:
+            s : complex = data.payload.complex_power
+            self.readoutS.setText(f'S={abs(s)}<{math.degrees(cmath.phase(s))}={s}')
+        except AttributeError:
+            pass
 
     def connecting(self):
         self.statusbar.showMessage('Connecting...')

@@ -1,24 +1,19 @@
 import time
 import datetime
-import random
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-
 import pyvisa
 
-DC_SOURCE_ADDR = "USB0::0x3121::0x1004::615E25116::INSTR"
-AC_SOURCE_ADDR = "USB0::0xFFFF::0x7749::581H24111::INSTR"
+from util.data import (
+    SupplyData,
+    ACPayload,
+    AC_PAYLOAD_CSV_HEADER,
+    DC_PAYLOAD_CSV_HEADER,
+)
+
 
 rm = pyvisa.ResourceManager()
 
-@dataclass
-class Data:
-    voltage : float
-    current : float
-    power : float
-    temperature : float | None # TODO seperate temperature collection
-    timestamp : float
-    payload : tuple = tuple()
 
 class Supply(ABC):
     """
@@ -29,9 +24,9 @@ class Supply(ABC):
         pass
 
     @abstractmethod
-    def meas(self) -> Data:
+    def meas(self) -> SupplyData:
         """
-        Measure output data.
+        Take output measurements.
 
         Returns:
             Data: Voltage, current, power, timestamp, and any additional data
@@ -143,16 +138,17 @@ class DCSupply(Supply):
         self.connected = False
 
     def meas(self):
-        return Data(
+        return SupplyData(
             voltage=self.measV(),
             current=self.measI(),
             power=self.measP(),
-            temperature=random.randint(1, 100),
-            timestamp=datetime.datetime.now().timestamp()
+            # temperature=random.randint(1, 100),
+            timestamp=datetime.datetime.now().timestamp(),
+            monotonic_time=time.monotonic()
         )
 
     def getHeader(self):
-        return ''
+        return DC_PAYLOAD_CSV_HEADER
 
     def connect(self):
         if not self.connected:
@@ -211,21 +207,21 @@ class ACSupply(Supply):
         self.connected = False
 
     def meas(self):
-        return Data(
+        return SupplyData(
             voltage=self.measVAC(),
             current=self.measIAC(),
             power=self.measP_apparent(),
-            temperature=random.randint(1, 100),
+            # temperature=random.randint(1, 100),
             timestamp=datetime.datetime.now().timestamp(),
-            payload=(
-                self.measP_real(), # real power
-                self.measP_reactive(), # reactive power
-                self.measFreq(), # frequency
+            monotonic_time=time.monotonic(),
+            payload=ACPayload(
+                complex_power=self.measP_real() + self.measP_reactive()*1j,
+                frequency=self.measFreq(), # frequency
             )
         )
 
     def getHeader(self):
-        return 'real power (W),reactive power (VAr),frequency'
+        return AC_PAYLOAD_CSV_HEADER
 
     def connect(self):
         if not self.connected:
@@ -309,7 +305,7 @@ class ACSupply(Supply):
         self.measVAC()
 
     def setV(self, v):
-        return self.setV(v)
+        return self.setVAC(v)
 
 
 def cli_AC():

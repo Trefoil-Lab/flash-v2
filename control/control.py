@@ -18,6 +18,9 @@ from util.signals import (
     SampleSignals,
     Params
 )
+from util.data import (
+    SamplerData
+)
 from control.supply import (
     Supply,
     DCSupply,
@@ -114,9 +117,10 @@ class ControlRunner(QRunnable):
 
         with self.supply_lock:
             area = 0.25 * math.pi * new_params.diameter * new_params.diameter
-            self.supply.setVAC(new_params.e_field * new_params.height)
+            self.supply.setV(new_params.e_field * new_params.height)
             self.supply.setI(new_params.curr_density * area)
-            self.supply.setFreq(new_params.freq)
+            if self.supply_type == SupplyType.AC:
+                self.supply.setFreq(new_params.freq)
 
         # do we need to update sample interval?
         if new_params.sample_interval != self.params.sample_interval:
@@ -204,26 +208,8 @@ class ControlRunner(QRunnable):
     # sample signal handlers #
     ##########################
 
-    def receiveData(self, inc_data : tuple[float]):
-        area = 0.25 * math.pi * self.params.diameter * self.params.diameter
-        # (time, V, I, |S|, P, Q, T) -> (time, E, J, P, T, V, I, |S|, P, Q)
-        out_data = [
-            inc_data[0], # time 
-            # TODO peak e-field probably off by factor of sqrt(2)?
-            inc_data[1] / self.params.height, # e-field from voltage
-            # TODO peak current probably off by factor of sqrt(2)?
-            inc_data[2] / area, # current density from current
-            inc_data[3] / area, # power density from apparent power
-            inc_data[4], # temperature
-            # unprocessed:
-            inc_data[1], # voltage rms
-            inc_data[2], # current rms
-            # inc_data[3], # |S|
-            # inc_data[4], # P
-            # inc_data[5], #Q
-        ]
-
-        self.signals.newDataSig.emit(tuple(out_data))
+    def receiveData(self, inc_data : SamplerData):
+        self.signals.newDataSig.emit(inc_data)
 
 
 @dataclass

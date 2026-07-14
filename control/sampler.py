@@ -12,7 +12,11 @@ from util.signals import (
 )
 from control.supply import (
     Supply,
-    Data
+)
+from util.data import (
+    SupplyData,
+    SamplerData,
+    ACPayload
 )
 
 
@@ -41,34 +45,30 @@ class SampleRunner(Thread):
         sc = sched.scheduler(time.perf_counter, time.sleep)
 
         start_time = time.perf_counter()
-        data : Data
+        data : SupplyData
 
         def sample(sc : sched.scheduler, target_time : float):
             with self.supply_lock:
-                data = self.supply.meas()
-            self.sample_signal.newDataSig.emit((
-                time.perf_counter() - start_time, # time
-                data.voltage, # V
-                data.current, #I
-                data.power, # P
-                data.temperature, # T
-            ))
-
-            # send to queue for saving
+                raw = self.supply.meas()
             area = 0.25 * math.pi * self.control_runner.params.diameter * self.control_runner.params.diameter
-            queue_data = (
-                data.timestamp, # timestamp
-                time.perf_counter() - start_time, # time
-                data.voltage, # voltage
-                data.current, # current
-                data.power, # apparent power
-                data.voltage / self.control_runner.params.height, # E
-                data.current / area, # J
-                data.power / area, # P
-                data.temperature, # temprature
-                *data.payload, # any additional data
+
+            processed = SamplerData(
+                voltage=raw.voltage,
+                current=raw.current,
+                power=raw.power,
+                e_field=raw.voltage / self.control_runner.params.height,
+                curr_density=raw.current / area,
+                power_density=raw.power / area,
+                timestamp=raw.timestamp,
+                delta_time=raw.monotonic_time - start_time,
+                temperature=random.randint(0, 100), # TODO measure temperature?
+                payload=raw.payload
             )
-            self.queue.put(queue_data)
+
+            # send to control to forward to gui
+            self.sample_signal.newDataSig.emit(processed)
+            # send to queue for saving
+            self.queue.put(processed)
 
             # check event to see if we should continue
             if not self.stop_event.is_set():

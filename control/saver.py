@@ -8,6 +8,9 @@ from util.const import (
     SAVE_INTERVAL_S,
     CSV_HEADER,
 )
+from util.data import (
+    SamplerData
+)
 
 
 class SaveRunner(Thread):
@@ -25,14 +28,18 @@ class SaveRunner(Thread):
         self.payload_header = payload_header
 
     def save(self, sc : sched.scheduler | None):
-        d : tuple
+        d : SamplerData
         with open(self.filepath, 'a') as f:
             while not self.queue.empty():
                 try:
                     d = self.queue.get_nowait()
                 except Empty:
                     break
-                f.write(','.join( [str(x) for x in d] ) + '\n')
+                f.write(','.join( [str(x) for x in (
+                    d.timestamp, d.delta_time, d.voltage, d.current, d.power,
+                    d.e_field, d.curr_density, d.power_density, d.temperature,
+                    *d.payload
+                )] ) + '\n')
         
         if not self.stop_event.is_set() and sc != None:
             sc.enter(SAVE_INTERVAL_S, 1, self.save, (sc, ))

@@ -25,6 +25,10 @@ from util.const import (
     DC_SOURCE_ADDR,
     SupplyType,
 )
+from util.data import (
+    SamplerData,
+    ACPayload
+)
 
 
 WINDOW_TITLE = 'DC flash'
@@ -262,13 +266,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # control signal handlers #
     ###########################
 
-    def receiveData(self, data : tuple[float]):
-        # (time, E, J, P, T, V, I)
-        self.time.append(data[0])
-        self.E.append(data[1])
-        self.J.append(data[2])
-        self.P.append(data[3])
-        self.T.append(data[4])
+    def receiveData(self, data : SamplerData):
+        self.time.append(data.delta_time)
+        self.E.append(data.e_field)
+        self.J.append(data.curr_density)
+        self.P.append(data.power_density)
+        self.T.append(data.temperature)
 
         self.graph1.getPlotItem().removeItem(self.EPlotItem)
         self.graph1.getPlotItem().removeItem(self.JPlotItem)
@@ -279,8 +282,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.PPlotItem = self.graph2.plot(self.time, self.P, pen=pg.mkPen(color=POWER_DENSITY_COLOR_STR))
         self.TPlotItem = self.graph2.plot(self.time, self.T, pen=pg.mkPen(color=TEMPERATURE_COLOR_STR))
         
-        self.readoutV.setText(f'V={data[5]}')
-        self.readoutI.setText(f'I={data[6]}')
+        self.readoutV.setText(f'V={data.voltage}')
+        self.readoutI.setText(f'I={data.current}')
 
     def connecting(self):
         self.statusbar.showMessage('Connecting...')
