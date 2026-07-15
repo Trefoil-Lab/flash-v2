@@ -102,6 +102,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # connect buttons
         self.currentDensityModeComboBox.currentIndexChanged.connect(self.currDensityModeSelect)
+        self.diameterCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits())
+        self.heightCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits())
+        self.eFieldDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits())
         self.applyButton.clicked.connect(self.applyPress)
         self.connectionButton.clicked.connect(self.connectionTogglePress)
         self.startButton.clicked.connect(self.startPress)
@@ -182,6 +185,23 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.currentDensityEndLabel.setDisabled(False)
             self.currentDensityRateDoubleSpinBox.setDisabled(False)
             self.currentDensityRateLabel.setDisabled(False)
+
+    def updateSpinBoxLimits(self):
+        height = self.heightCmDoubleSpinBox.value()
+        diameter = self.diameterCmDoubleSpinBox.value()
+        area = 0.25 * math.pi * diameter * diameter
+
+        # update e field limits based on max voltage
+        e_field_max = 300 / height
+        self.eFieldDoubleSpinBox.setMaximum(e_field_max)
+
+        # update current density limits based on selected voltage / e field
+        voltage = self.eFieldDoubleSpinBox.value() * self.height
+        curr_density_max = 15 / area
+        if voltage <= 150:
+            curr_density_max = 30 / area
+        self.currentDensityStartDoubleSpinBox.setMaximum(curr_density_max)
+        self.currentDensityEndDoubleSpinBox.setMaximum(curr_density_max)
 
     def closeEvent(self, event):
         print('Stopping.')

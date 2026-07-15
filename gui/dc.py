@@ -15,6 +15,7 @@ from PyQt6 import QtGui
 import pyqtgraph as pg
 import numpy as np
 import os
+import math
 import datetime
 
 from .DCMainWindow import Ui_MainWindow
@@ -176,6 +177,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.currentDensityEndLabel.setDisabled(False)
             self.currentDensityRateDoubleSpinBox.setDisabled(False)
             self.currentDensityRateLabel.setDisabled(False)
+
+    def updateSpinBoxLimits(self):
+        height = self.heightCmDoubleSpinBox.value()
+        diameter = self.diameterCmDoubleSpinBox.value()
+        area = 0.25 * math.pi * diameter * diameter
+
+        # update e field limits based on max voltage
+        e_field_max = 160 / height
+        self.eFieldDoubleSpinBox.setMaximum(e_field_max)
+
+        # update current density limits based on max current
+        curr_density_max = 120 / area
+        self.currentDensityStartDoubleSpinBox.setMaximum(curr_density_max)
+        self.currentDensityEndDoubleSpinBox.setMaximum(curr_density_max)
 
     def closeEvent(self, event):
         print('Stopping.')
