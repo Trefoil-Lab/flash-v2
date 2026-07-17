@@ -21,8 +21,14 @@ import datetime
 
 from .ACMainWindow import Ui_MainWindow
 from .ConnectDialog import Ui_Dialog
-from util.signals import GuiSignals, ControlSignals, Params, RampData
 from control.control import ControlRunner
+from util.signals import (
+    GuiSignals,
+    ControlSignals,
+    Params,
+    RampParams,
+    PulseParams,
+)
 from util.const import (
     AC_SOURCE_ADDR,
     SupplyType
@@ -66,11 +72,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.threadpool = QThreadPool()
         self.control_thread = ControlRunner(self.signals, 
                                             Params(
-                                                ramp_data=RampData(
+                                                ramp_data=RampParams(
                                                     ramp=self.currentDensityModeComboBox.currentText == 'Ramp',
                                                     start=self.currentDensityStartDoubleSpinBox.value(),
                                                     end=self.currentDensityEndDoubleSpinBox.value(),
                                                     rate=self.currentDensityRateDoubleSpinBox.value()
+                                                ),
+                                                pulse_data=PulseParams(
+                                                    pulse=self.pulseEnableCheckBox.isChecked(),
+                                                    period=self.periodDoubleSpinBox.value(),
+                                                    duty_cycle=self.dutyCycleSpinBox.value()
                                                 ),
                                                 e_field=self.eFieldDoubleSpinBox.value(),
                                                 curr_density=self.currentDensityStartDoubleSpinBox.value(),
@@ -217,11 +228,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # TODO verify height and diameter are nonzero
         self.applyButton.setDisabled(True) # prevent further presses
         params = Params(
-            ramp_data=RampData(
+            ramp_data=RampParams(
                 ramp=self.currentDensityModeComboBox.currentText() == 'Ramp',
                 start=self.currentDensityStartDoubleSpinBox.value(),
                 end=self.currentDensityEndDoubleSpinBox.value(),
                 rate=self.currentDensityRateDoubleSpinBox.value()
+            ),
+            pulse_data=PulseParams(
+                pulse=self.pulseEnableCheckBox.isChecked(),
+                period=self.periodDoubleSpinBox.value(),
+                duty_cycle=self.dutyCycleSpinBox.value()
             ),
             e_field=self.eFieldDoubleSpinBox.value(),
             curr_density=self.currentDensityStartDoubleSpinBox.value(),

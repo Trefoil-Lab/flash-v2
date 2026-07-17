@@ -21,6 +21,14 @@ from util.signals import (
 from util.data import (
     SamplerData
 )
+from util.process import (
+    Segment,
+    SegmentType,
+    Interface,
+    PulseConf,
+    Events,
+    SampleConf
+)
 from control.supply import (
     Supply,
     DCSupply,
@@ -29,6 +37,7 @@ from control.supply import (
 from control.ramper import RampRunner
 from control.sampler import SampleRunner
 from control.saver import SaveRunner
+from control.processor import ProcessRunner
 
 class ControlRunner(QRunnable):
     """
@@ -52,6 +61,8 @@ class ControlRunner(QRunnable):
         self.status_lock = Lock()
 
         self.stop_event = Event() # used by sampler, saver, and process threads
+        self.pause_event = Event()
+        self.jump_event = Event()
 
         self.data_queue = SimpleQueue() # data from sampler to saver
 
@@ -139,30 +150,9 @@ class ControlRunner(QRunnable):
         
         self.params.ramp_data = new_params.ramp_data
 
-        if self.status.running == True and new_params.ramp_data.ramp == True and new_params.ramp_data.end != self.params.curr_density:
-            # if running and ramping is enabled and target current density changes, we need to ramp
-            
-            # if we are already running...
-            # TODO: is this how we want to do it? should we even allow ramping while running?
-            #       would it make more sense to ramp from the present current setting?
-            # area = 0.25 * math.pi * new_params.diameter * new_params.diameter
-            # with self.supply_lock:
-            #     new_params.ramp_data.start = self.supply.measI() / area
-            
-            self.params.ramp_data = new_params.ramp_data
-            self.ramp()
-        else:
-            # otherwise just set the parameters directly
-            self.setParamsDirect(new_params)
-        
-        self.signals.setParamsDoneSig.emit()
+        self.setParamsDirect(new_params)
 
-    def ramp(self):
-        self.signals.rampingSig.emit()
-        # assume the present current density is the same as our target start
-        self.ramping_thread = RampRunner(self.signals, self.gui_signals, self.params, self.stop_event)
-        # spawn ramping thread
-        self.ramping_thread.start()
+        self.signals.setParamsDoneSig.emit()
 
     def start(self):
         self.signals.startingSig.emit()
@@ -170,17 +160,59 @@ class ControlRunner(QRunnable):
             self.supply.enable()
 
         self.stop_event.clear()
-        self.sample_thread = SampleRunner(self.supply, self.supply_lock, self.sample_signals,
-                                          self.params.sample_interval, self.stop_event, self, self.data_queue)
-        self.sample_thread.start() # start sample thread
 
-        # if ramping is enabled, go do that
+        area = 0.25 * math.pi * self.params.diameter * self.params.diameter
+
         if self.params.ramp_data.ramp:
-            self.ramp()
+            segs = [
+                Segment(
+                    type=SegmentType.RAMP,
+                    target=self.params.ramp_data.end,
+                    rate=self.params.ramp_data.rate,
+                ),
+                Segment(
+                    type=SegmentType.END
+                )
+            ]
+        else:
+            segs = [
+                Segment(type=SegmentType.END)
+            ]
+        self.process_thread = ProcessRunner(
+            segs=segs,
+            start_value=self.params.curr_density,
+            pulse=PulseConf(
+                pulse=self.params.pulse_data.pulse,
+                value=self.params.e_field * self.params.height,
+                period=self.params.pulse_data.period,
+                duty_cycle=self.params.pulse_data.duty_cycle
+            ),
+            interface=Interface(
+                lock=self.supply_lock,
+                set_val=self.supply.setI,
+                get_val=self.supply.getI,
+                pulse_on=self.supply.setV,
+                pulse_off=lambda : self.supply.setV(0),
+                meas=self.supply.meas,
+                events=Events(
+                    self.stop_event,
+                    self.pause_event,
+                    self.jump_event
+                )
+            ),
+            sample=SampleConf(
+                self.params.sample_interval,
+                self.sample_signals,
+                self.data_queue
+            )
+        )
 
         # start saving thread
         self.save_thread = SaveRunner(self.filepath, self.data_queue, self.stop_event, self.supply.getHeader())
         self.save_thread.start()
+
+        # start process runner
+        self.process_thread.start()
 
         with self.status_lock:
             self.status.running = True
@@ -197,7 +229,7 @@ class ControlRunner(QRunnable):
         
         if self.status.running:
             self.stop_event.set() # tell sampling to stop
-            self.sample_thread.join() # wait for sample thread to stop
+            self.process_thread.join() # wait for process thread to stop
             self.save_thread.join()
 
             with self.status_lock:

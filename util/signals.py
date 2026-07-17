@@ -7,15 +7,22 @@ from util.data import (
 
 
 @dataclass
-class RampData:
+class RampParams:
     ramp: bool
     start: float
     end: float
     rate: float
 
 @dataclass
+class PulseParams:
+    pulse: bool
+    period: float
+    duty_cycle: float
+
+@dataclass
 class Params:
-    ramp_data: RampData | None
+    ramp_data: RampParams | None
+    pulse_data: PulseParams | None
     e_field: float
     curr_density: float
     diameter: float
