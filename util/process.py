@@ -49,6 +49,8 @@ class SampleConf(NamedTuple):
     interval : float
     sample_signals : SampleSignals
     data_queue : SimpleQueue
+    height : float
+    diameter : float
 
 class Events(NamedTuple):
     stop : Event

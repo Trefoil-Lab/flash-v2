@@ -113,9 +113,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # connect buttons
         self.currentDensityModeComboBox.currentIndexChanged.connect(self.currDensityModeSelect)
-        self.diameterCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits())
-        self.heightCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits())
-        self.eFieldDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits())
+        self.pulseEnableCheckBox.checkStateChanged.connect(self.pulseCheckChange)
+        self.diameterCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
+        self.heightCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
+        self.eFieldDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
         self.applyButton.clicked.connect(self.applyPress)
         self.connectionButton.clicked.connect(self.connectionTogglePress)
         self.startButton.clicked.connect(self.startPress)
@@ -197,6 +198,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.currentDensityRateDoubleSpinBox.setDisabled(False)
             self.currentDensityRateLabel.setDisabled(False)
 
+    def pulseCheckChange(self):
+        if self.pulseEnableCheckBox.isChecked():
+            self.periodLabel.setDisabled(False)
+            self.periodDoubleSpinBox.setDisabled(False)
+            self.dutyCycleLabel.setDisabled(False)
+            self.dutyCycleSpinBox.setDisabled(False)
+        else:
+            self.periodLabel.setDisabled(True)
+            self.periodDoubleSpinBox.setDisabled(True)
+            self.dutyCycleLabel.setDisabled(True)
+            self.dutyCycleSpinBox.setDisabled(True)
+
     def updateSpinBoxLimits(self):
         height = self.heightCmDoubleSpinBox.value()
         diameter = self.diameterCmDoubleSpinBox.value()
@@ -207,7 +220,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.eFieldDoubleSpinBox.setMaximum(e_field_max)
 
         # update current density limits based on selected voltage / e field
-        voltage = self.eFieldDoubleSpinBox.value() * self.height
+        voltage = self.eFieldDoubleSpinBox.value() * height
         curr_density_max = 15 / area
         if voltage <= 150:
             curr_density_max = 30 / area

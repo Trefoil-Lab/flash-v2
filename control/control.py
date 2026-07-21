@@ -167,25 +167,29 @@ class ControlRunner(QRunnable):
             segs = [
                 Segment(
                     type=SegmentType.RAMP,
-                    target=self.params.ramp_data.end,
-                    rate=self.params.ramp_data.rate,
+                    target=self.params.ramp_data.end * area,
+                    rate=self.params.ramp_data.rate * area,
+                    time=None
                 ),
                 Segment(
-                    type=SegmentType.END
+                    type=SegmentType.END,
+                    target=None,
+                    rate=None,
+                    time=None
                 )
             ]
         else:
             segs = [
-                Segment(type=SegmentType.END)
+                Segment(type=SegmentType.END, target=None, rate=None, time=None)
             ]
         self.process_thread = ProcessRunner(
             segs=segs,
-            start_value=self.params.curr_density,
+            start_value=self.params.curr_density*area,
             pulse=PulseConf(
                 pulse=self.params.pulse_data.pulse,
                 value=self.params.e_field * self.params.height,
-                period=self.params.pulse_data.period,
-                duty_cycle=self.params.pulse_data.duty_cycle
+                period=self.params.pulse_data.period / 1000,
+                duty_cycle=self.params.pulse_data.duty_cycle  / 100
             ),
             interface=Interface(
                 lock=self.supply_lock,
@@ -201,9 +205,11 @@ class ControlRunner(QRunnable):
                 )
             ),
             sample=SampleConf(
-                self.params.sample_interval,
+                self.params.sample_interval / 1000,
                 self.sample_signals,
-                self.data_queue
+                self.data_queue,
+                self.params.height,
+                self.params.diameter
             )
         )
 

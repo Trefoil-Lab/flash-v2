@@ -52,6 +52,8 @@ class ProcessRunner(Thread):
         self.sample_interval = sample.interval
         self.data_queue = sample.data_queue
         self.sample_signals = sample.sample_signals
+        self.height = sample.height
+        self.diameter = sample.diameter
 
         self.idx = 0
         self.paused = False
@@ -98,10 +100,10 @@ class ProcessRunner(Thread):
             # if we are paused, don't schedule next move
             return
 
-        match self.segs[self.idx].segment_type:
+        match self.segs[self.idx].type:
             case SegmentType.RAMP:
                 # we are ramping, so schedule next increment
-                sc.enterabs(RAMP_INTERVAL_S, 1, self.ramp, (sc, time.monotonic()))
+                sc.enter(RAMP_INTERVAL_S, 1, self.ramp, (sc, time.monotonic()))
             case SegmentType.HOLD:
                 # we are holding
                 self.segs[self.idx].entered = time.monotonic()
@@ -152,15 +154,16 @@ class ProcessRunner(Thread):
         sc.enterabs(target_time + delay, 1, self.pulse, (sc, target_time + delay))
 
     def sample(self, sc : sched.scheduler, target_time : float):
-            with self.supply_lock:
-                raw = self.supply.meas()
-            area = 0.25 * math.pi * self.control_runner.params.diameter * self.control_runner.params.diameter
+            # print('sample!')
+            with self.interface.lock:
+                raw = self.interface.meas()
+            area = 0.25 * math.pi * self.diameter * self.diameter
 
             processed = SamplerData(
                 voltage=raw.voltage,
                 current=raw.current,
                 power=raw.power,
-                e_field=raw.voltage / self.control_runner.params.height,
+                e_field=raw.voltage / self.height,
                 curr_density=raw.current / area,
                 power_density=raw.power / area,
                 timestamp=raw.timestamp,
@@ -175,7 +178,7 @@ class ProcessRunner(Thread):
             self.data_queue.put(processed)
 
             # check event to see if we should continue
-            if not self.stop_event.is_set():
+            if not self.events.stop.is_set():
                 # schedule next sample
-                next_time = target_time + self.interval / 1000
+                next_time = target_time + self.sample_interval
                 sc.enterabs(next_time, 1, self.sample, argument=(sc, next_time))

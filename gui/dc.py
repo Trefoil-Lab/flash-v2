@@ -111,6 +111,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # connect buttons
         self.currentDensityModeComboBox.currentIndexChanged.connect(self.currDensityModeSelect)
+        self.pulseEnableCheckBox.checkStateChanged.connect(self.pulseCheckChange)
+        self.diameterCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
+        self.heightCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
+        self.eFieldDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
         self.applyButton.clicked.connect(self.applyPress)
         self.connectionButton.clicked.connect(self.connectionTogglePress)
         self.startButton.clicked.connect(self.startPress)
@@ -188,6 +192,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.currentDensityEndLabel.setDisabled(False)
             self.currentDensityRateDoubleSpinBox.setDisabled(False)
             self.currentDensityRateLabel.setDisabled(False)
+
+    def pulseCheckChange(self):
+        if self.pulseEnableCheckBox.isChecked():
+            self.periodLabel.setDisabled(False)
+            self.periodDoubleSpinBox.setDisabled(False)
+            self.dutyCycleLabel.setDisabled(False)
+            self.dutyCycleSpinBox.setDisabled(False)
+        else:
+            self.periodLabel.setDisabled(True)
+            self.periodDoubleSpinBox.setDisabled(True)
+            self.dutyCycleLabel.setDisabled(True)
+            self.dutyCycleSpinBox.setDisabled(True)
 
     def updateSpinBoxLimits(self):
         height = self.heightCmDoubleSpinBox.value()
