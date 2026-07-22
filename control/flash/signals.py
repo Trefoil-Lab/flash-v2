@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
-from util.data import (
+from control.data import (
     SamplerData,
 )
 

@@ -6,7 +6,7 @@ from threading import Thread, Event
 from util.const import (
     RAMP_INTERVAL_S
 )
-from util.signals import (
+from control.flash.signals import (
     ControlSignals,
     GuiSignals,
     Params,

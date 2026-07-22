@@ -5,7 +5,7 @@ import math
 import random
 from threading import Thread, Lock, Event
 
-from util.process import (
+from control.flash.process import (
     Segment,
     SegmentType,
     PulseConf,
@@ -13,11 +13,11 @@ from util.process import (
     Interface,
     SampleConf
 )
-from util.data import (
+from control.data import (
     SamplerData,
     ACPayload
 )
-from util.signals import (
+from control.flash.signals import (
     SampleSignals
 )
 from util.const import (
@@ -167,7 +167,7 @@ class ProcessRunner(Thread):
                 curr_density=raw.current / area,
                 power_density=raw.power / area,
                 timestamp=raw.timestamp,
-                delta_time=raw.monotonic_time - self.start_time,
+                time=raw.time - self.start_time,
                 temperature=random.randint(0, 100), # TODO measure temperature?
                 payload=raw.payload
             )

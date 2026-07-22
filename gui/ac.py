@@ -19,10 +19,10 @@ import math
 import cmath
 import datetime
 
-from .ACMainWindow import Ui_MainWindow
-from .ConnectDialog import Ui_Dialog
-from control.control import ControlRunner
-from util.signals import (
+from .ui.ACMainWindow import Ui_MainWindow
+from .ui.ConnectDialog import Ui_Dialog
+from control.flash.control import ControlRunner
+from control.flash.signals import (
     GuiSignals,
     ControlSignals,
     Params,
@@ -33,7 +33,7 @@ from util.const import (
     AC_SOURCE_ADDR,
     SupplyType
 )
-from util.data import (
+from control.data import (
     SamplerData,
     ACPayload
 )
@@ -323,7 +323,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ###########################
 
     def receiveData(self, data : SamplerData):
-        self.time.append(data.delta_time)
+        self.time.append(data.time)
         self.E.append(data.e_field)
         self.J.append(data.curr_density)
         self.P.append(data.power_density)

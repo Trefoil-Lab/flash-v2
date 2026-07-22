@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
 )
-from gui.LauncherMainWindow import Ui_MainWindow
+from gui.ui.LauncherMainWindow import Ui_MainWindow
 import gui.dc
 import gui.ac
 

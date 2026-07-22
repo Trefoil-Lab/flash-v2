@@ -7,7 +7,7 @@ import sched
 from util.const import (
     SAVE_INTERVAL_S,
 )
-from util.data import (
+from control.data import (
     Data
 )
 

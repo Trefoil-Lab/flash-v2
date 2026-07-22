@@ -7,13 +7,13 @@ import sched
 from threading import Thread, Event, Lock
 from queue import SimpleQueue, Empty
 
-from util.signals import (
+from control.flash.signals import (
     SampleSignals
 )
-from control.supply import (
+from control.flash.supply import (
     Supply,
 )
-from util.data import (
+from control.data import (
     SupplyData,
     SamplerData,
     ACPayload
@@ -60,7 +60,7 @@ class SampleRunner(Thread):
                 curr_density=raw.current / area,
                 power_density=raw.power / area,
                 timestamp=raw.timestamp,
-                delta_time=raw.monotonic_time - start_time,
+                time=raw.time - start_time,
                 temperature=random.randint(0, 100), # TODO measure temperature?
                 payload=raw.payload
             )

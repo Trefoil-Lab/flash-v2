@@ -12,16 +12,16 @@ from PyQt6.QtCore import (
 from util.const import (
     SupplyType
 )
-from util.signals import (
+from control.flash.signals import (
     ControlSignals,
     GuiSignals,
     SampleSignals,
     Params
 )
-from util.data import (
+from control.data import (
     SamplerData
 )
-from util.process import (
+from control.flash.process import (
     Segment,
     SegmentType,
     Interface,
@@ -29,15 +29,15 @@ from util.process import (
     Events,
     SampleConf
 )
-from control.supply import (
+from control.flash.supply import (
     Supply,
     DCSupply,
     ACSupply
 )
-from control.ramper import RampRunner
-from control.sampler import SampleRunner
+from control.flash.ramper import RampRunner
+from control.flash.sampler import SampleRunner
 from control.saver import SaveRunner
-from control.processor import ProcessRunner
+from control.flash.processor import ProcessRunner
 
 class ControlRunner(QRunnable):
     """

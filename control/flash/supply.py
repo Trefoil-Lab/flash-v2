@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 import pyvisa
 
-from util.data import (
+from control.data import (
     SupplyData,
     ACPayload,
     AC_PAYLOAD_CSV_HEADER,
@@ -144,7 +144,7 @@ class DCSupply(Supply):
             power=self.measP(),
             # temperature=random.randint(1, 100),
             timestamp=datetime.datetime.now().timestamp(),
-            monotonic_time=time.monotonic()
+            time=time.monotonic()
         )
 
     def getHeader(self):
@@ -213,7 +213,7 @@ class ACSupply(Supply):
             power=self.measP_apparent(),
             # temperature=random.randint(1, 100),
             timestamp=datetime.datetime.now().timestamp(),
-            monotonic_time=time.monotonic(),
+            time=time.monotonic(),
             payload=ACPayload(
                 complex_power=self.measP_real() + self.measP_reactive()*1j,
                 frequency=self.measFreq(), # frequency

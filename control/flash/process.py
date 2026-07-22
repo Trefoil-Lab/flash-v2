@@ -4,10 +4,10 @@ from typing import NamedTuple, Callable
 from threading import Lock, Event
 from queue import SimpleQueue
 
-from util.data import (
+from control.data import (
     SupplyData
 )
-from util.signals import (
+from control.flash.signals import (
     SampleSignals
 )
 

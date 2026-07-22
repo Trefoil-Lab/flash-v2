@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import NamedTuple, ClassVar
 from abc import ABC, abstractmethod
 
-from control.multimeter import (
+from control.multimeter.multimeter import (
     Mode
 )
 
