@@ -25,7 +25,7 @@
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QPushButton" name="ConnectionPushButton">
+        <widget class="QPushButton" name="connectionPushButton">
          <property name="text">
           <string>Connect</string>
          </property>
@@ -33,6 +33,9 @@
        </item>
        <item>
         <widget class="QPushButton" name="startStopPushButton">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
          <property name="text">
           <string>Start</string>
          </property>
@@ -52,7 +55,20 @@
         </spacer>
        </item>
        <item>
-        <widget class="QLCDNumber" name="lcdNumber"/>
+        <widget class="QLCDNumber" name="lcdNumber">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>50</width>
+           <height>0</height>
+          </size>
+         </property>
+         <property name="digitCount">
+          <number>7</number>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -73,36 +89,57 @@
           </widget>
          </item>
          <item row="0" column="1">
-          <widget class="QComboBox" name="functionComboBox"/>
+          <widget class="QComboBox" name="functionComboBox">
+           <item>
+            <property name="text">
+             <string>DC Voltage</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>DC Current</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>AC Voltage</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>AC Current</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Resistance</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Resistance (4 probe)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Frequency</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Period</string>
+            </property>
+           </item>
+          </widget>
          </item>
          <item row="1" column="0">
-          <widget class="QLabel" name="resolutionLabel">
-           <property name="text">
-            <string>Resolution</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="1">
-          <widget class="QComboBox" name="resolutionComboBox"/>
-         </item>
-         <item row="2" column="0">
-          <widget class="QLabel" name="rangeLabel">
-           <property name="text">
-            <string>Range</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1">
-          <widget class="QComboBox" name="rangeComboBox"/>
-         </item>
-         <item row="3" column="0">
           <widget class="QLabel" name="autoZeroLabel">
            <property name="text">
             <string>Auto Zero</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
+         <item row="1" column="1">
           <widget class="QCheckBox" name="autoZeroCheckBox">
            <property name="checked">
             <bool>true</bool>
@@ -155,7 +192,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pushButton">
+            <widget class="QPushButton" name="browseButton">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>

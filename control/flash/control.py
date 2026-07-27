@@ -110,7 +110,7 @@ class ControlRunner(QRunnable):
             time.sleep(1)
 
         self.filepath = filepath
-        self.save_thread = SaveRunner(self.filepath, self.data_queue, self.stop_event, self.supply.getHeader())
+        self.save_thread = SaveRunner(self.filepath, '', self.data_queue, self.stop_event,)
 
         with self.status_lock:
             self.status.connected = True

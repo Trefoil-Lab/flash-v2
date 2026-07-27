@@ -20,35 +20,38 @@ import cmath
 import datetime
 
 from .ui.MultimeterMainWindow import Ui_MainWindow
-from .ui.ConnectDialog import Ui_Dialog
+from .ui.SerialConnectionDialog import Ui_Dialog
 from control.multimeter.control import (
-    MultiMeterRunner
+    ControlRunner,
 )
-from control.flash.signals import (
+from control.multimeter.multimeter import (
+    Mode
+)
+from control.multimeter.signals import (
     GuiSignals,
     ControlSignals,
-    Params,
-    RampParams,
-    PulseParams,
-)
-from util.const import (
-    AC_SOURCE_ADDR,
-    SupplyType
+    Config,
 )
 from control.data import (
-    SamplerData,
-    ACPayload
+    MultimeterData
 )
 
 
-WINDOW_TITLE = 'AC flash'
+WINDOW_TITLE = 'Multimeter'
 CONNECTION_DIALOG_TITLE = 'connection dialog'
 
-E_FIELD_COLOR_STR = '#00FFFF'
-CURRENT_DENSITY_COLOR_STR = '#FF0000'
-POWER_DENSITY_COLOR_STR = '#FFFF00'
-TEMPERATURE_COLOR_STR = '#00FF00'
+GRAPH_COLOR_STR = '#FF0000'
 
+MODE_MAP = {
+    'DC Voltage': Mode.DC_VOLT,
+    'DC Current': Mode.DC_CURR,
+    'AC Voltage': Mode.AC_VOLT,
+    'AC Current': Mode.AC_CURR,
+    'Resistance': Mode.RESIST,
+    'Resistance (4 probe)': Mode.RESIST_4WIRE,
+    'Frequency': Mode.FREQ,
+    'Period': Mode.PERIOD,
+}
 
 def main():
     app = QApplication(sys.argv)
@@ -71,6 +74,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # set up control thread
         self.signals = GuiSignals()
+        self.threadpool = QThreadPool()
+        self.control_thread = ControlRunner(self.signals)
+        self.threadpool.start(self.control_thread)
         
         # set up control signal listeners
         self.control_thread.signals.newDataSig.connect(self.receiveData)
@@ -78,30 +84,20 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.control_thread.signals.connectedSig.connect(self.connected)
         self.control_thread.signals.disconnectingSig.connect(self.disconnecting)
         self.control_thread.signals.disconnectedSig.connect(self.disconnected)
-        self.control_thread.signals.settingParamsSig.connect(self.settingParams)
-        self.control_thread.signals.setParamsDoneSig.connect(self.setParamsDone)
         self.control_thread.signals.startingSig.connect(self.starting)
         self.control_thread.signals.startedSig.connect(self.started)
         self.control_thread.signals.stoppingSig.connect(self.stopping)
         self.control_thread.signals.stoppedSig.connect(self.stopped)
-        self.control_thread.signals.rampingSig.connect(self.ramping)
-        self.control_thread.signals.rampingDoneSig.connect(self.rampingDone)
 
         # connect buttons
-        self.currentDensityModeComboBox.currentIndexChanged.connect(self.currDensityModeSelect)
-        self.pulseEnableCheckBox.checkStateChanged.connect(self.pulseCheckChange)
-        self.diameterCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
-        self.heightCmDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
-        self.eFieldDoubleSpinBox.valueChanged.connect(self.updateSpinBoxLimits)
-        self.applyButton.clicked.connect(self.applyPress)
-        self.connectionButton.clicked.connect(self.connectionTogglePress)
-        self.startButton.clicked.connect(self.startPress)
-        self.stopButton.clicked.connect(self.stopPress)
+        self.connectionPushButton.clicked.connect(self.connectionTogglePress)
+        self.startStopPushButton.clicked.connect(self.startStopPress)
+        self.browseButton.clicked.connect(self.browse)
 
         # set up graphs
         self.time = []
         self.val = []
-        self.valPlotItem = self.graph1.plot(self.time, self.val, pen=pg.mkPen(color=E_FIELD_COLOR_STR))
+        self.valPlotItem = self.graph.plot(self.time, self.val, pen=pg.mkPen(color=GRAPH_COLOR_STR))
         self.graph.setLimits(xMin=0)
         self.graph.setBackground(background=None)
 
@@ -126,92 +122,45 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if self.control_thread.status.connected:
             self.signals.disconnectSig.emit()
         else:
-            dlg = ConnectDialog(self.signals, self.connectionButton)
+            dlg = SerialConnectionDialog(self, self.signals)
             dlg.exec()
 
-    def startPress(self):
-        self.startButton.setDisabled(True) # prevent further presses
+    def startStopPress(self):
+        self.startStopPushButton.setDisabled(True) # prevent further presses
+        
+        if self.control_thread.status.running:
+            self.startStopPushButton.setText('Start')
+            self.signals.stopSig.emit()
+        else:
+            # validate file path
+            folder = self.folderLineEdit.text()
+            if not os.path.isdir(folder):
+                QMessageBox.critical(None, 'Error', 'Invalid directory.')
+                return
+            
+            # build file name
+            filename : str = datetime.datetime.now().strftime('%y-%m-%d-%H%M')
+            filename += '_' + '-'.join(self.memoLineEdit.text().split())
+            filename += '.csv'
+            print(folder)
+            print(filename)
+            filepath = os.path.join(folder, filename)
 
-        self.signals.startSig.emit()
+            # create configuration
+            conf = Config(
+                mode=MODE_MAP[self.functionComboBox.currentText()],
+                auto_zero=self.autoZeroCheckBox.isChecked(),
+                memo=self.memoLineEdit.text().strip(),
+                filepath=filepath
+            )
 
-        # clear previously plotted data
-        self.time = []
-        self.val = []
+            self.signals.startSig.emit(conf)
+            self.startStopPushButton.setText('Stop')
+            
+            # clear previously plotted data
+            self.time = []
+            self.val = []
 
-    def stopPress(self):
-        self.stopButton.setDisabled(True) # prevent further presses
-
-        self.signals.stopSig.emit()
-
-    ###########################
-    # control signal handlers #
-    ###########################
-
-    def receiveData(self, data : SamplerData):
-        self.time.append(data.time)
-        self.val.append(data.e_field)
-
-
-    def connecting(self):
-        self.statusbar.showMessage('Connecting...')
-
-    def connected(self):
-        self.connectionButton.setDisabled(False)
-        self.startButton.setDisabled(False)
-        self.applyButton.setDisabled(False)
-        with self.control_thread.status_lock:
-            if self.control_thread.status.running:
-                self.stopButton.setDisabled(False)
-            else:
-                self.startButton.setDisabled(False)
-        self.connectionButton.setText('Disconnect')
-        self.statusbar.showMessage('Connected!', 1000)
-
-    def disconnecting(self):
-        self.statusbar.showMessage('Disconnecting...')
-
-    def disconnected(self):
-        self.connectionButton.setDisabled(False)
-        self.applyButton.setDisabled(True)
-        self.startButton.setDisabled(True)
-        self.stopButton.setDisabled(True)
-        self.connectionButton.setText('Connect')
-        self.statusbar.showMessage('Disconnected!', 1000)
-
-    def started(self):
-        self.stopButton.setDisabled(False)
-        self.readoutI.show()
-        self.readoutV.show()
-        self.readoutS.show()
-        self.statusbar.showMessage('Started!', 1000)
-
-    def stopping(self):
-        self.statusbar.showMessage('Stopping...')
-
-    def stopped(self):
-        self.startButton.setDisabled(False)
-        self.applyButton.setDisabled(False)
-        self.readoutI.hide()
-        self.readoutV.hide()
-        self.readoutS.hide()
-        self.statusbar.showMessage('Stopped!', 1000)
-
-class ConnectDialog(Ui_Dialog, QDialog):
-    def __init__(self, gui_signals : GuiSignals, connection_button : QPushButton):
-        super().__init__()
-        self.setupUi(self)
-
-        ######################
-        # custom setup below #
-        ######################
-
-        self.gui_signals = gui_signals
-        self.connection_button = connection_button
-        self.setWindowTitle(CONNECTION_DIALOG_TITLE)
-
-        # set up event listeners
-        self.browseButton.pressed.connect(self.browse)
-    
     def browse(self):
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.FileMode.Directory)
@@ -220,30 +169,111 @@ class ConnectDialog(Ui_Dialog, QDialog):
             folder = file_dialog.selectedFiles()[0]
             self.filePathLineEdit.setText(folder)
 
-    def accept(self):
-        folder = self.filePathLineEdit.text()
-        if not os.path.isdir(folder):
-            QMessageBox.critical(None, 'Error', 'Invalid directory.')
-            return
+
+    ###########################
+    # control signal handlers #
+    ###########################
+
+    def receiveData(self, data : MultimeterData):
+        self.time.append(data.time)
+        self.val.append(data.value)
+
+        self.graph.getPlotItem().removeItem(self.valPlotItem)
+        self.valPlotItem = self.graph.plot(self.time, self.val, pen=pg.mkPen(color=GRAPH_COLOR_STR))
         
-        # build file name
-        filename : str = datetime.datetime.now().strftime('%y-%m-%d-%H%M')
-        for input in (self.materialLineEdit, self.temperatureLineEdit, self.volumeLineEdit, self.currentLineEdit):
-            if len(input.text()) != 0:
-                filename += '_' + '-'.join(input.text().split())
-        filename += '.csv'
-        print(folder)
-        print(filename)
-        filepath = os.path.join(folder, filename)
-        print(filepath)
+        self.lcdNumber.display(data.value)
 
-        self.gui_signals.connectSig.emit(AC_SOURCE_ADDR, filepath)
+    def connecting(self):
+        self.statusbar.showMessage('Connecting...')
 
+    def connected(self):
+        self.connectionButton.setDisabled(False)
+        self.startStopPushButton.setDisabled(False)
+        self.applyButton.setDisabled(False)
+        with self.control_thread.status_lock:
+            if self.control_thread.status.running:
+                self.stopButton.setDisabled(False)
+            else:
+                self.startStopPushButton.setDisabled(False)
+        self.connectionButton.setText('Disconnect')
+        self.statusbar.showMessage('Connected!', 1000)
+
+    def disconnecting(self):
+        self.statusbar.showMessage('Disconnecting...')
+
+    def disconnected(self):
+        self.connectionButton.setDisabled(False)
+        self.startStopPushButton.setDisabled(True)
+        self.connectionButton.setText('Connect')
+        self.statusbar.showMessage('Disconnected!', 1000)
+
+    def starting(self):
+        self.statusbar.showMessage('Starting...')
+
+    def started(self):
+        self.startStopPushButton.setDisabled(False)
+        self.statusbar.showMessage('Started!', 1000)
+
+        # disable configuration fields, connection button
+        self.connectionPushButton.setDisabled(True)
+        self.functionLabel.setDisabled(True)
+        self.functionComboBox.setDisabled(True)
+        self.autoZeroLabel.setDisabled(True)
+        self.autoZeroCheckBox.setDisabled(True)
+        self.memoLabel.setDisabled(True)
+        self.memoLineEdit.setDisabled(True)
+        self.folderLabel.setDisabled(True)
+        self.folderLineEdit.setDisabled(True)
+        self.browseButton.setDisabled(True)
+        # enable lcd number
+        self.lcdNumber.setDisabled(False)
+
+        # clear data
+        self.val = []
+        self.time = []
+
+    def stopping(self):
+        self.statusbar.showMessage('Stopping...')
+
+    def stopped(self):
+        self.startStopPushButton.setDisabled(False)
+        self.statusbar.showMessage('Stopped!', 1000)
+
+        # enable configuration fields, connection button
+        self.connectionPushButton.setDisabled(False)
+        self.functionLabel.setDisabled(False)
+        self.functionComboBox.setDisabled(False)
+        self.autoZeroLabel.setDisabled(False)
+        self.autoZeroCheckBox.setDisabled(False)
+        self.memoLabel.setDisabled(False)
+        self.memoLineEdit.setDisabled(False)
+        self.folderLabel.setDisabled(False)
+        self.folderLineEdit.setDisabled(False)
+        self.browseButton.setDisabled(False)
+        # disable lcd number
+        self.lcdNumber.setDisabled(True)
+
+
+class SerialConnectionDialog(QDialog, Ui_Dialog):
+    def __init__(self, main_window : MainWindow, gui_signals : GuiSignals):
+        super().__init__()
+        self.setupUi(self)
+
+        ###############################
+        # custom initialization below #
+        ###############################
+
+        self.main_window = main_window
+        self.gui_signals = gui_signals
+
+        self.setWindowTitle(CONNECTION_DIALOG_TITLE)
+
+    def accept(self):
+        self.main_window.connectionPushButton.setDisabled(True)
+        self.gui_signals.connectSig.emit(
+            self.portSpinBox.value(),
+        )
         return super().accept()
-    
-    def reject(self):
-        self.connection_button.setDisabled(False)
-        return super().reject()
 
 if __name__ == "__main__":
     main()

@@ -3,6 +3,9 @@ import pyvisa
 import pyvisa.constants
 import time
 
+# from util import util
+
+
 rm = pyvisa.ResourceManager()
 
 class Mode(StrEnum):
@@ -21,6 +24,35 @@ class Range(StrEnum):
     AUTO = 'DEF'
 
 class Multimeter:
+    # range_limits : dict[Mode, util.Limits] = {
+    #     Mode.AC_VOLT: util.Limits(1e-1, 1e3),
+    #     Mode.AC_CURR: util.Limits(1e0, 3e0),
+    #     Mode.DC_VOLT: util.Limits(1e-3, 1e3),
+    #     Mode.DC_CURR: util.Limits(1e-2, 3e0),
+    #     Mode.RESIST: util.Limits(1e2, 1e8),
+    #     Mode.RESIST_4WIRE: util.Limits(1e2, 1e8),
+    #     Mode.FREQ: util.Limits(1e-1, 1e3),
+    #     Mode.PERIOD: util.Limits(1e-1, 1e3)
+    # }
+
+# VOLT:AC: MAX=+9.99999900E-02
+#  MIN=+1.00000000E-03
+
+# CURR:AC: MAX=+1.00000000E-04
+#  MIN=+1.00000000E-06
+
+# VOLT:DC: MAX=+1.00000000E-03
+#  MIN=+3.00000000E-06
+
+# CURR:DC: MAX=+1.00000000E-04
+#  MIN=+3.00000000E-07
+
+# RES: MAX=+1.00000000E+04
+#  MIN=+3.00000000E+01
+
+# FRES: MAX=+1.00000000E+04
+#  MIN=+3.00000000E+01
+
     def __init__(self,
         port : int
     ):
@@ -54,11 +86,13 @@ class Multimeter:
         mode : Mode,
         range : Range | float = Range.AUTO,
         resolution : Range | float = Range.AUTO,
+        auto_zero : bool = True,
         count : int = 1,
         delay : float | None = None,
     ) -> None:
         # set mode, range, and resolution
         self.res.write(f'CONF:{str(mode)} {str(range)},{str(resolution)}')
+        self.res.write(f'ZERO:AUTO {'ON' if auto_zero else 'OFF'}')
 
         self.res.write(f'SAMP:COUN {count}') # set sample count
         if not delay is None and delay > 0:
@@ -87,14 +121,17 @@ def main():
         mode=Mode.DC_VOLT,
     )
 
-    mm.res.write('TRIG:COUN:INF')
-    while True:
-        try:
-            mm.res.write('READ?')
-            print(mm.res.read())
-        except KeyboardInterrupt as e:
-            break
-    mm.res.write('SYST:LOC')
+    for i in Mode:
+        print(f'{i}: MAX={mm.res.query(i + ':RES? MAX')} MIN={mm.res.query(i + ':RES? MIN')}')
+
+    # mm.res.write('TRIG:COUN:INF')
+    # while True:
+    #     try:
+    #         mm.res.write('READ?')
+    #         print(mm.res.read())
+    #     except KeyboardInterrupt as e:
+    #         break
+    # mm.res.write('SYST:LOC')
 
 if __name__ == "__main__":
     main()

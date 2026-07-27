@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>286</width>
-    <height>144</height>
+    <height>176</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -72,6 +72,13 @@
         </property>
         <property name="text">
          <string>AC</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="MultimeterPushButton">
+        <property name="text">
+         <string>Multimeter</string>
         </property>
        </widget>
       </item>

@@ -1,4 +1,4 @@
-# Form implementation generated from reading ui file '.\MainWindow.ui'
+# Form implementation generated from reading ui file '.\LauncherMainWindow.ui'
 #
 # Created by: PyQt6 UI code generator 6.11.0
 #
@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(286, 144)
+        MainWindow.resize(286, 176)
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
@@ -44,6 +44,9 @@ class Ui_MainWindow(object):
         self.ACpushButton.setSizePolicy(sizePolicy)
         self.ACpushButton.setObjectName("ACpushButton")
         self.verticalLayout.addWidget(self.ACpushButton)
+        self.MultimeterPushButton = QtWidgets.QPushButton(parent=self.centralwidget)
+        self.MultimeterPushButton.setObjectName("MultimeterPushButton")
+        self.verticalLayout.addWidget(self.MultimeterPushButton)
         spacerItem2 = QtWidgets.QSpacerItem(20, 0, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
         self.verticalLayout.addItem(spacerItem2)
         self.horizontalLayout.addLayout(self.verticalLayout)
@@ -66,3 +69,4 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.DCpushButton.setText(_translate("MainWindow", "DC"))
         self.ACpushButton.setText(_translate("MainWindow", "AC"))
+        self.MultimeterPushButton.setText(_translate("MainWindow", "Multimeter"))

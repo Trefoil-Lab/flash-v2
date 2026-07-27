@@ -37,8 +37,8 @@ class Data(ABC):
 
     def __iter__(self):
         return iter((self.time))
-    @abstractmethod
     @property
+    @abstractmethod
     def header(self) -> str:
         pass
 
@@ -62,7 +62,7 @@ class SupplyData(Data):
     power : float
     timestamp : float # provided by datetime.datetime.now().timestamp()
     time : float # provided by time.monotonic()
-    payload : Payload = Payload()
+    payload : Payload = None
     temperature : float | None = None # TODO seperate temperature collection?
 
     def __iter__(self):
@@ -82,7 +82,7 @@ class SamplerData(Data):
     timestamp : float
     time : float
     temperature : float
-    payload : Payload = Payload()
+    payload : Payload = None
 
     def __iter__(self):
         return iter(

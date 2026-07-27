@@ -6,8 +6,9 @@ from PyQt6.QtWidgets import (
 from gui.ui.LauncherMainWindow import Ui_MainWindow
 import gui.dc
 import gui.ac
+import gui.mm
 
-MAIN_WINDOW_TITLE = 'flash-v1'
+MAIN_WINDOW_TITLE = 'flash-v2'
 
 def main():
     app = QApplication(sys.argv)
@@ -32,6 +33,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # connect buttons to handlers
         self.DCpushButton.pressed.connect(self.DC_press)
         self.ACpushButton.pressed.connect(self.AC_press)
+        self.MultimeterPushButton.pressed.connect(self.MM_press)
 
     def DC_press(self):
         new_window = gui.dc.MainWindow()
@@ -41,6 +43,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def AC_press(self):
         new_window = gui.ac.MainWindow()
+        new_window.show()
+        self.windows.append(new_window)
+        # self.close()
+
+    def MM_press(self):
+        new_window = gui.mm.MainWindow()
         new_window.show()
         self.windows.append(new_window)
         # self.close()
