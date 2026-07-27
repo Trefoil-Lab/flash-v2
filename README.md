@@ -2,5 +2,5 @@
 
 ## Packaging
 ```sh
-uv run pyinstaller --windowed --name flash-v1 gui.py
+uv run pyinstaller --windowed --name flash-v2 main.py
 ```
