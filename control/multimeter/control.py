@@ -123,6 +123,8 @@ class ControlRunner(QRunnable):
             sample_signals=self.sample_signals
         )
 
+        self.save_thread.start()
+        self.sample_thread.start()
         self.status.running = True
 
         self.signals.startedSig.emit()
