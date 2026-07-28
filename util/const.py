@@ -1,3 +1,6 @@
+"""
+Global constants.
+"""
 from enum import Enum
 
 DC_SOURCE_ADDR = "USB0::0x3121::0x1004::615E25116::INSTR"
@@ -8,5 +11,8 @@ SAVE_INTERVAL_S = 10
 
 
 class SupplyType(Enum):
+    """
+    Enum to indicate power supply type: AC or DC
+    """
     DC = 1
     AC = 2

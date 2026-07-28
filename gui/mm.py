@@ -1,3 +1,7 @@
+"""
+GUI for measurements with a multimeter.
+"""
+
 import sys
 from PyQt6.QtCore import QSize, Qt, QThreadPool
 from PyQt6.QtWidgets import (
@@ -62,7 +66,23 @@ def main():
     app.exec()
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+    """
+    Main window for multimeter GUI.
+
+    Spawns a control.multimeter.control.ControlRunner thread to manage
+    the experiment. The ControlRunner thread then spawns
+    additional threads.
+
+    Qt signals are used for communication between the GUI and the
+    control thread.
+    """
     def __init__(self, *args, obj=None, **kwargs):
+        """
+        Create the main window and spawn the control thread.
+
+        Creates a control.multimeter.signals.GuiSignals object for
+        coordination with the control thread.
+        """
         super().__init__(*args, **kwargs)
         self.setupUi(self)
 
@@ -106,17 +126,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     # button press handlers #
     #########################
 
-    def closeEvent(self, event):
-        print('Stopping.')
-        self.signals.stopSig.emit()
-        print('Disconnecting.')
-        self.signals.disconnectSig.disconnect()
-        print('Stopping control thread.')
-        self.signals.exitSig.emit()
-        print('Exiting...')
-        event.accept()
 
     def connectionTogglePress(self):
+        """
+        Handle presses of the connect/disconnect button. If the 
+        control thread is connected to the multimeter, issue a
+        disconnect signals. Else open a SerialConnectionDialog.
+        """
         self.connectionButton.setDisabled(True) # prevent further presses
 
         if self.control_thread.status.connected:
@@ -126,6 +142,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             dlg.exec()
 
     def startStopPress(self):
+        """
+        Handle presses of the start/stop button. If the experiment is
+        already running, issue a stop signal. If it is not running,
+        validate the folder specified by the user for data collection,
+        and build a filename using the timestamp and the user-provided
+        memo. Pass configuration details to the control thread in a
+        start signal.
+        """
         self.startStopPushButton.setDisabled(True) # prevent further presses
         
         if self.control_thread.status.running:
@@ -156,12 +180,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             self.signals.startSig.emit(conf)
             self.startStopPushButton.setText('Stop')
+            self.connectionPushButton.setDisabled(True)
             
             # clear previously plotted data
             self.time = []
             self.val = []
 
     def browse(self):
+        """
+        Browse button press handler. Opens file browser dialog and
+        places the path of the chosen folder in the filepath line
+        edit element.
+        """
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.FileMode.Directory)
 
@@ -169,12 +199,33 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             folder = file_dialog.selectedFiles()[0]
             self.filePathLineEdit.setText(folder)
 
+    def closeEvent(self, event):
+        """
+        Issues stop, disconnect, and exit signals to the control
+        thread, then closes the window. Called when the window is
+        closed.
+        """
+        print('Stopping.')
+        self.signals.stopSig.emit()
+        print('Disconnecting.')
+        self.signals.disconnectSig.disconnect()
+        print('Stopping control thread.')
+        self.signals.exitSig.emit()
+        print('Exiting...')
+        event.accept()
 
     ###########################
     # control signal handlers #
     ###########################
 
     def receiveData(self, data : MultimeterData):
+        """
+        Handles data received from the control thread. Plots data and
+        updates the lcd readout.
+
+        Args:
+            data (MultimeterData): data from the control thread
+        """
         self.time.append(data.time)
         self.val.append(data.value)
 
@@ -184,9 +235,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.lcdNumber.display(data.value)
 
     def connecting(self):
+        """
+        Handles the connecting signal from the control thread: shows
+        a message on the status bar.
+        """
         self.statusbar.showMessage('Connecting...')
 
     def connected(self):
+        """
+        Handles the connected signal from the control thread: enables
+        the start button, apply button, and disconnect button. Set the
+        text of the connection button to be "Disconnect". Displays a
+        message on the status bar.
+        """
         self.connectionButton.setDisabled(False)
         self.startStopPushButton.setDisabled(False)
         self.applyButton.setDisabled(False)
@@ -199,23 +260,40 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage('Connected!', 1000)
 
     def disconnecting(self):
+        """
+        Handles the disconnecting signal from the control thread: shows
+        a message on the status bar.
+        """
         self.statusbar.showMessage('Disconnecting...')
 
     def disconnected(self):
+        """
+        Handles the disconnected signal from the control thread:
+        disables the apply, start, and stop buttons. Sets the
+        connection button text to "Connect". Shows a message on the
+        status bar.
+        """
         self.connectionButton.setDisabled(False)
         self.startStopPushButton.setDisabled(True)
         self.connectionButton.setText('Connect')
         self.statusbar.showMessage('Disconnected!', 1000)
 
     def starting(self):
+        """
+        Handles the starting signal: shows a message on the status
+        bar.
+        """
         self.statusbar.showMessage('Starting...')
 
     def started(self):
+        """
+        Handles the started signal: enables the stop button and
+        shows a message on the status bar.
+        """
         self.startStopPushButton.setDisabled(False)
         self.statusbar.showMessage('Started!', 1000)
 
-        # disable configuration fields, connection button
-        self.connectionPushButton.setDisabled(True)
+        # disable configuration fields
         self.functionLabel.setDisabled(True)
         self.functionComboBox.setDisabled(True)
         self.autoZeroLabel.setDisabled(True)
@@ -233,9 +311,16 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.time = []
 
     def stopping(self):
+        """
+        Handles the stopping signal: shows a message on the status bar.
+        """
         self.statusbar.showMessage('Stopping...')
 
     def stopped(self):
+        """
+        Handles the stopped signal: enables the start and connection buttons,
+        and shows a message on the status bar.
+        """
         self.startStopPushButton.setDisabled(False)
         self.statusbar.showMessage('Stopped!', 1000)
 
@@ -255,6 +340,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
 class SerialConnectionDialog(QDialog, Ui_Dialog):
+    """
+    Dialog that is shown when the connect button is pressed in the
+    multimeter GUI. Prompts the user for the COM port.
+    """
     def __init__(self, main_window : MainWindow, gui_signals : GuiSignals):
         super().__init__()
         self.setupUi(self)
@@ -269,6 +358,10 @@ class SerialConnectionDialog(QDialog, Ui_Dialog):
         self.setWindowTitle(CONNECTION_DIALOG_TITLE)
 
     def accept(self):
+        """
+        Accept button press handler. Emits the connect signal with
+        the selected COM port number.
+        """
         self.main_window.connectionPushButton.setDisabled(True)
         self.gui_signals.connectSig.emit(
             self.portSpinBox.value(),

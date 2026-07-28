@@ -49,6 +49,14 @@ class ControlRunner(QRunnable):
             params : Params,
             supply_type : SupplyType
     ):
+        """
+        Initialize control thread. `supply_type` specifies power supply type.
+
+        Args:
+            gui_signals (GuiSignals): signals from the GUI
+            params (Params): initial parameters
+            supply_type (SupplyType): type of power supply (AC or DC)
+        """
         super().__init__()
 
         self.params = params
@@ -94,9 +102,19 @@ class ControlRunner(QRunnable):
     ######################
 
     def exit(self):
+        """
+        Handle exit signal.
+        """
         self.eventloop.exit()
 
-    def connect(self, addr, filepath):
+    def connect(self, addr : str, filepath : str):
+        """
+        Connect to power supply and create saving thread.
+
+        Args:
+            addr (str): power supply address (VISA resource specifier)
+            filepath (str): data output file path
+        """
         self.signals.connectingSig.emit()
 
         with self.supply_lock:
@@ -117,6 +135,9 @@ class ControlRunner(QRunnable):
         self.signals.connectedSig.emit()
 
     def disconnect(self):
+        """
+        Disconnect from power supply
+        """
         self.signals.disconnectingSig.emit()
         with self.supply_lock:
             self.supply.disconnect()
@@ -124,6 +145,13 @@ class ControlRunner(QRunnable):
         self.signals.disconnectedSig.emit()
 
     def setParamsDirect(self, new_params : Params):
+        """
+        Applies paramaters directly to the power supply, ignoring any
+        ramping parameters. Used mostly internally.
+
+        Args:
+            new_params (Params): new parameters
+        """
         # ignores any ramp information
 
         with self.supply_lock:
@@ -142,6 +170,13 @@ class ControlRunner(QRunnable):
         self.params.ramp_data = ramp_data # preserve ramp data
 
     def setParams(self, new_params : Params):
+        """
+        Set output parameters, including handling ramping if necessary.
+        Handles set parameters signal from GUI.
+
+        Args:
+            new_params (Params): new parameters
+        """
         self.signals.settingParamsSig.emit()
 
         if new_params == self.params: # only update if we need to
@@ -155,6 +190,9 @@ class ControlRunner(QRunnable):
         self.signals.setParamsDoneSig.emit()
 
     def start(self):
+        """
+        Start the experiment. The save and process threads are started.
+        """
         self.signals.startingSig.emit()
         with self.supply_lock:
             self.supply.enable()
@@ -225,6 +263,10 @@ class ControlRunner(QRunnable):
         self.signals.startedSig.emit()
 
     def stop(self):
+        """
+        Stop the experiment. The power supply output is disabled and all
+        child threads are given the signal to stop.
+        """
         self.signals.stoppingSig.emit()
         
         with self.supply_lock:
@@ -247,10 +289,19 @@ class ControlRunner(QRunnable):
     ##########################
 
     def receiveData(self, inc_data : SamplerData):
+        """
+        Receive data from the process thread and forward it to the GUI.
+
+        Args:
+            inc_data (SamplerData): data from the process thread
+        """
         self.signals.newDataSig.emit(inc_data)
 
 
 @dataclass
 class Status:
+    """
+    Status flags for the control thread.
+    """
     connected : bool = False
     running : bool = False

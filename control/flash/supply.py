@@ -1,3 +1,7 @@
+"""
+Drivers for power supplies.
+"""
+
 import time
 import datetime
 from abc import ABC, abstractmethod
@@ -21,6 +25,12 @@ class Supply(ABC):
     """
     @abstractmethod
     def __init__(self, addr : str):
+        """
+        Create power supply object.
+
+        Args:
+            addr (str): power supply address (VISA resource identifier)
+        """
         pass
 
     @abstractmethod
@@ -29,7 +39,7 @@ class Supply(ABC):
         Take output measurements.
 
         Returns:
-            Data: Voltage, current, power, timestamp, and any additional data
+            SupplyData: Voltage, current, power, timestamp, and any additional data
         """
         pass
 
@@ -133,6 +143,11 @@ class Supply(ABC):
 
 
 class DCSupply(Supply):
+    """
+    Generic driver for DC power supplies supporting SCPI.
+
+    For now, hard coded to expect BK Precision MR3K160120
+    """
     def __init__(self : DCSupply, addr : str):
         self.addr = addr
         self.connected = False
@@ -202,6 +217,11 @@ class DCSupply(Supply):
 
 
 class ACSupply(Supply):
+    """
+    Generic driver for AC power supplies supporting SCPI.
+
+    For now, hard coded to expect BK Precision 9833B
+    """
     def __init__(self : ACSupply, addr : str):
         self.addr = addr
         self.connected = False
@@ -247,6 +267,12 @@ class ACSupply(Supply):
             self.connected = False
 
     def setVAC(self, v : float) -> None:
+        """
+        Set output AC voltage.
+
+        Args:
+            v (float): volts rms
+        """
         if v > 150:
             self.res.write('volt:rang high')
         else:
@@ -257,36 +283,96 @@ class ACSupply(Supply):
         self.res.write(f'outp:lim:curr {i}')
 
     def setFreq(self, f : float) -> None:
+        """
+        Set output frequency.
+
+        Args:
+            f (float): Hertz
+        """
         self.res.write(f'freq {f}')
 
     def getVAC(self) -> float:
+        """
+        Get output AC voltage limit setting.
+
+        Returns:
+            float: volts rms
+        """
         return float(self.res.query('volt:ac?'))
 
     def getI(self) -> float:
         return float(self.res.query('outp:lim:curr?'))
 
     def getFreq(self) -> float:
+        """
+        Get output frequency setting.
+
+        Returns:
+            float: Hertz
+        """
         return float(self.res.query('freq?'))
 
     def measVAC(self) -> float:
+        """
+        Measure output AC voltage.
+
+        Returns:
+            float: volts rms
+        """
         return float(self.res.query('meas:volt:ac?'))
 
     def measIAC(self) -> float:
+        """
+        Measure output AC current.
+
+        Returns:
+            float: amps rms
+        """
         return float(self.res.query('meas:curr:ac?'))
     
     def measI_inrush(self) -> float:
+        """
+        Measure output inrush current.
+
+        Returns:
+            float: amps rms
+        """
         return float(self.res.query('meas:curr:inrush?'))
     
     def measP_apparent(self) -> float:
+        """
+        Measure output apparent power.
+
+        Returns:
+            float: VA
+        """
         return float(self.res.query('meas:pow:ac:app?'))
     
     def measP_real(self) -> float:
+        """
+        Measure output real power.
+
+        Returns:
+            float: Watts
+        """
         return float(self.res.query('meas:pow:ac:real?'))
 
     def measP_reactive(self) -> float:
+        """
+        Measure output reactive power.
+
+        Returns:
+            float: VAr
+        """
         return float(self.res.query('meas:pow:ac:reac?'))
 
     def measFreq(self) -> float:
+        """
+        Measure output frequency.
+
+        Returns:
+            float: Hertz
+        """
         return float(self.res.query('meas:freq?'))
 
     def enable(self) -> None:
@@ -309,6 +395,9 @@ class ACSupply(Supply):
 
 
 def cli_AC():
+    """
+    CLI for testing AC power supply driver
+    """
     PROMPT_STR = '> '
     def help():
         print('usage: <command> [<arg> [<arg>]]')
@@ -401,6 +490,9 @@ def cli_AC():
         cmd = input(PROMPT_STR)
 
 def cli_DC():
+    """
+    CLI for testing DC power supply driver
+    """
     PROMPT_STR = '> '
     def help():
         print('usage: <command> [<arg> [<arg>]]')

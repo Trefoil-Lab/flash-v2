@@ -24,9 +24,18 @@ from control.multimeter.sampler import (
 )
 
 class ControlRunner(QRunnable):
+    """
+    Handles control signals from GUI. Spawns and manages other control threads.
+    """
     def __init__(self,
         gui_signals : GuiSignals,
     ):
+        """
+        Initialize control thread.
+
+        Args:
+            gui_signals (GuiSignals): signals from the GUI
+        """
         super().__init__()
 
         self.status = Status()
@@ -59,9 +68,18 @@ class ControlRunner(QRunnable):
     ######################
 
     def exit(self):
+        """
+        Handle exit signal.
+        """
         self.eventloop.exit()
 
     def connect(self, port : int):
+        """
+        Connect to multimeter.
+
+        Args:
+            port (int): COM port to use
+        """
         self.signals.connectingSig.emit()
 
         self.mm = multimeter.Multimeter(port)
@@ -71,6 +89,9 @@ class ControlRunner(QRunnable):
         self.signals.connectedSig.emit()
 
     def disconnect(self):
+        """
+        Disconnect from multimeter.
+        """
         self.signals.disconnectingSig.emit()
 
         self.mm.disconnect()
@@ -79,6 +100,13 @@ class ControlRunner(QRunnable):
         self.signals.disconnectedSig.emit()
 
     def start(self, conf : Config):
+        """
+        Start the experiment. Create and start sample and saver
+        threads. 
+
+        Args:
+            conf (Config): _description_
+        """
         self.signals.startingSig.emit()
 
         self.save_thread = SaveRunner(
@@ -100,6 +128,9 @@ class ControlRunner(QRunnable):
         self.signals.startedSig.emit()
 
     def stop(self):
+        """
+        Stop the experiment. Child threads are given the signal to stop.
+        """
         self.signals.stoppingSig.emit()
         
         if self.status.running:
@@ -116,10 +147,19 @@ class ControlRunner(QRunnable):
     ##########################
 
     def receiveData(self, inc_data : MultimeterData):
+        """
+        Receive data from the sampler thread and forward it to the GUI.
+
+        Args:
+            inc_data (MultimeterData): data from the sampler thread
+        """
         self.signals.newDataSig.emit(inc_data)
 
 
 @dataclass
 class Status:
+    """
+    Status flags for the control thread.
+    """
     connected : bool = False
     running : bool = False

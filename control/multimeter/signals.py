@@ -1,3 +1,7 @@
+"""
+Classes for communication between threads in multimeter control.
+"""
+
 from PyQt6.QtCore import QObject, pyqtSignal
 from dataclasses import dataclass
 
@@ -11,12 +15,18 @@ from control.multimeter import (
 
 @dataclass
 class Config:
+    """
+    Experiment configuration.
+    """
     mode : multimeter.Mode
     auto_zero : bool
     memo : str
     filepath : str
 
 class GuiSignals(QObject):
+    """
+    Signals from GUI
+    """
     connectSig = pyqtSignal(int) # com port
     disconnectSig = pyqtSignal()
     startSig = pyqtSignal(Config)
@@ -24,6 +34,9 @@ class GuiSignals(QObject):
     exitSig = pyqtSignal()
 
 class ControlSignals(QObject):
+    """
+    Signals from control thread
+    """
     newDataSig = pyqtSignal(MultimeterData)
 
     connectingSig = pyqtSignal()
@@ -39,4 +52,7 @@ class ControlSignals(QObject):
     stoppedSig = pyqtSignal()
 
 class SampleSignals(QObject):
+    """
+    Signals from sampler thread
+    """
     newDataSig = pyqtSignal(MultimeterData)

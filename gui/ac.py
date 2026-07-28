@@ -1,3 +1,7 @@
+"""
+GUI for AC flash experiments.
+"""
+
 import sys
 from PyQt6.QtCore import QSize, Qt, QThreadPool
 from PyQt6.QtWidgets import (
@@ -57,7 +61,23 @@ def main():
     app.exec()
 
 class MainWindow(QMainWindow, Ui_MainWindow):
+    """
+    Main window for AC flash GUI.
+
+    Spawns a control.flash.control.ControlRunner thread to manage
+    the experiment. The ControlRunner thread then spawns
+    additional threads.
+
+    Qt signals are used for communication between the GUI and the
+    control thread.
+    """
     def __init__(self, *args, obj=None, **kwargs):
+        """
+        Create the main window and spawn the control thread.
+
+        Creates a control.flash.signals.GuiSignals object for
+        coordination with the control thread.
+        """
         super().__init__(*args, **kwargs)
         self.setupUi(self)
 
@@ -187,6 +207,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     #########################
 
     def currDensityModeSelect(self):
+        """
+        Handle changes to the current density mode selections: if
+        'Hold' is selected, disable GUI elements related to ramp
+        mode. If 'Ramp' is selected, enable GUI elements related
+        to ramp mode.
+        """
         if self.currentDensityModeComboBox.currentText() == 'Hold':
             self.currentDensityEndDoubleSpinBox.setDisabled(True)
             self.currentDensityEndLabel.setDisabled(True)
@@ -199,6 +225,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.currentDensityRateLabel.setDisabled(False)
 
     def pulseCheckChange(self):
+        """
+        Handle changes to the pulse checkbox: if checked, enable
+        GUI elements related to pulse options, otherwise disable
+        these elements.
+        """
         if self.pulseEnableCheckBox.isChecked():
             self.periodLabel.setDisabled(False)
             self.periodDoubleSpinBox.setDisabled(False)
@@ -211,6 +242,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.dutyCycleSpinBox.setDisabled(True)
 
     def updateSpinBoxLimits(self):
+        """
+        Based on the height and diameter selected by the user,
+        update the limits on the E-field spin box to be within the
+        voltage limits of the power supply. Based on the dimensions
+        and E-field selected by the user, update the current density
+        limits.
+
+        This function is called every time the height, diameter, or
+        E-field data entries are changed.
+
+        For now, supply voltage and current limits are hardcoded for
+        the BK Precision 9830B.
+        """
         height = self.heightCmDoubleSpinBox.value()
         diameter = self.diameterCmDoubleSpinBox.value()
         area = 0.25 * math.pi * diameter * diameter
@@ -228,6 +272,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.currentDensityEndDoubleSpinBox.setMaximum(curr_density_max)
 
     def closeEvent(self, event):
+        """
+        Issues stop, disconnect, and exit signals to the control
+        thread, then closes the window. Called when the window is
+        closed.
+        """
         print('Stopping.')
         self.signals.stopSig.emit()
         print('Disconnecting.')
@@ -238,6 +287,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         event.accept()
 
     def applyPress(self):
+        """
+        Handle presses of the apply button: send the entered
+        parameters to the control thread, and update the preview
+        on the current density and E-field graph.
+        """
         # TODO verify height and diameter are nonzero
         self.applyButton.setDisabled(True) # prevent further presses
         params = Params(
@@ -293,15 +347,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
 
     def connectionTogglePress(self):
+        """
+        Handle presses of the connect/disconnect button. If the 
+        control thread is connected to the power supply, issue a
+        disconnect signals. Else open a ConnectDialog.
+        """
         self.connectionButton.setDisabled(True) # prevent further presses
 
         if self.control_thread.status.connected:
             self.signals.disconnectSig.emit()
         else:
-            dlg = ConnectDialog(self.signals, self.connectionButton)
+            dlg = FlashConnectDialog(self.signals, self.connectionButton)
             dlg.exec()
 
     def startPress(self):
+        """
+        Handle presses of the start button. Emit the start signal and
+        clear previously plotted data.
+        """
         self.startButton.setDisabled(True) # prevent further presses
 
         self.signals.startSig.emit()
@@ -314,6 +377,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.P = []
 
     def stopPress(self):
+        """
+        Handle presses of the stop button. Emit the stop signal.
+        """
         self.stopButton.setDisabled(True) # prevent further presses
 
         self.signals.stopSig.emit()
@@ -323,6 +389,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ###########################
 
     def receiveData(self, data : SamplerData):
+        """
+        Handles data received from the control thread. Plots received
+        data and provides readouts on the status bar.
+
+        Args:
+            data (SamplerData): data from the control thread
+        """
         self.time.append(data.time)
         self.E.append(data.e_field)
         self.J.append(data.curr_density)
@@ -347,9 +420,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             pass
 
     def connecting(self):
+        """
+        Handles the connecting signal from the control thread: shows
+        a message on the status bar.
+        """
         self.statusbar.showMessage('Connecting...')
 
     def connected(self):
+        """
+        Handles the connected signal from the control thread: enables
+        the start button, apply button, and disconnect button. Set the
+        text of the connection button to be "Disconnect". Displays a
+        message on the status bar.
+        """
         self.connectionButton.setDisabled(False)
         self.startButton.setDisabled(False)
         self.applyButton.setDisabled(False)
@@ -362,9 +445,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage('Connected!', 1000)
 
     def disconnecting(self):
+        """
+        Handles the disconnecting signal from the control thread: shows
+        a message on the status bar.
+        """
         self.statusbar.showMessage('Disconnecting...')
 
     def disconnected(self):
+        """
+        Handles the disconnected signal from the control thread:
+        disables the apply, start, and stop buttons. Sets the
+        connection button text to "Connect". Shows a message on the
+        status bar.
+        """
         self.connectionButton.setDisabled(False)
         self.applyButton.setDisabled(True)
         self.startButton.setDisabled(True)
@@ -373,23 +466,48 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage('Disconnected!', 1000)
 
     def settingParams(self):
+        """
+        Handles the setting parameters signal: shows a message on the
+        status bar.
+        """
         self.statusbar.showMessage('Applying...')
 
     def setParamsDone(self):
+        """
+        Handles the set parameters done signal: shows a message on
+        the status bar.
+        """
         self.applyButton.setDisabled(False)
         self.statusbar.showMessage('Applied!', 1000)
 
     def starting(self):
+        """
+        Handles the starting signal: shows a message on the status
+        bar.
+        """
         self.statusbar.showMessage('Starting...')
 
     def ramping(self):
+        """
+        Handles the ramping signal: disables the apply button while
+        ramping is in progress.
+        """
         self.applyButton.setDisabled(True)
 
     def rampingDone(self):
+        """
+        Handles the ramping done signal: enables the apply button and
+        shows a message on the status bar.
+        """
         self.applyButton.setDisabled(False)
         self.statusbar.showMessage('Ramping done!', 1000)
 
     def started(self):
+        """
+        Handles the started signal: enables the stop button, unhides
+        the readouts on the status bar, and shows a message on the
+        status bar.
+        """
         self.stopButton.setDisabled(False)
         self.readoutI.show()
         self.readoutV.show()
@@ -397,9 +515,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.statusbar.showMessage('Started!', 1000)
 
     def stopping(self):
+        """
+        Handles the stopping signal: shows a message on the status bar.
+        """
         self.statusbar.showMessage('Stopping...')
 
     def stopped(self):
+        """
+        Handles the stopped signal: enables the start and apply buttons,
+        hides the status bar readouts, and shows a message on the
+        status bar.
+        """
         self.startButton.setDisabled(False)
         self.applyButton.setDisabled(False)
         self.readoutI.hide()
@@ -407,7 +533,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.readoutS.hide()
         self.statusbar.showMessage('Stopped!', 1000)
 
-class ConnectDialog(Ui_Dialog, QDialog):
+class FlashConnectDialog(Ui_Dialog, QDialog):
+    """
+    Dialog that is shown when the connect button is pressed in the AC
+    flash GUI. Prompts the user for experiment metadata and data
+    output location.
+    """
     def __init__(self, gui_signals : GuiSignals, connection_button : QPushButton):
         super().__init__()
         self.setupUi(self)
@@ -424,6 +555,11 @@ class ConnectDialog(Ui_Dialog, QDialog):
         self.browseButton.pressed.connect(self.browse)
     
     def browse(self):
+        """
+        Browse button press handler. Opens file browser dialog and
+        places the path of the chosen folder in the filepath line
+        edit element.
+        """
         file_dialog = QFileDialog()
         file_dialog.setFileMode(QFileDialog.FileMode.Directory)
 
@@ -432,6 +568,11 @@ class ConnectDialog(Ui_Dialog, QDialog):
             self.filePathLineEdit.setText(folder)
 
     def accept(self):
+        """
+        Accept button press handler. Checks that the chosen folder is
+        valid, then constructs a file name from the provided metadata.
+        The connect signal is then emitted to the control thread.
+        """
         folder = self.filePathLineEdit.text()
         if not os.path.isdir(folder):
             QMessageBox.critical(None, 'Error', 'Invalid directory.')
@@ -453,6 +594,9 @@ class ConnectDialog(Ui_Dialog, QDialog):
         return super().accept()
     
     def reject(self):
+        """
+        Handle reject button press: enables connection button.
+        """
         self.connection_button.setDisabled(False)
         return super().reject()
 

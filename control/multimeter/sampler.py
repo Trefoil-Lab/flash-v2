@@ -20,6 +20,9 @@ from control.data import (
 
 
 class SampleRunner(Thread):
+    """
+    Applies configuration to the multimeter and takes readings.
+    """
     def __init__(self,
         multimeter : multimeter.Multimeter,
         config : Config,
@@ -27,6 +30,16 @@ class SampleRunner(Thread):
         data_queue : SimpleQueue,
         sample_signals : SampleSignals,
     ):
+        """
+        Initialize the sample collection thread.
+
+        Args:
+            multimeter (multimeter.Multimeter): multimeter to use
+            config (Config): configuration
+            stop_event (Event): stop when this event is set
+            data_queue (SimpleQueue): queue to which data is output
+            sample_signals (SampleSignals): signals to control thread
+        """
         super().__init__()
 
         self.mm = multimeter

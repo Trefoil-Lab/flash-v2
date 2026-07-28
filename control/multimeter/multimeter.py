@@ -1,3 +1,7 @@
+"""
+Multimeter drivers.
+"""
+
 from enum import StrEnum
 import pyvisa
 import pyvisa.constants
@@ -9,6 +13,9 @@ import time
 rm = pyvisa.ResourceManager()
 
 class Mode(StrEnum):
+    """
+    Multimeter operation mode.
+    """
     AC_VOLT = 'VOLT:AC'
     AC_CURR = 'CURR:AC'
     DC_VOLT = 'VOLT:DC'
@@ -19,11 +26,17 @@ class Mode(StrEnum):
     PERIOD = 'PER'
 
 class Range(StrEnum):
+    """
+    Minimum, maximum, and default options for numerical fields
+    """
     MIN = 'MIN'
     MAX = 'MAX'
     AUTO = 'DEF'
 
 class Multimeter:
+    """
+    Multimeter driver. Currently supports only the Hewlett-Packard 34401A.
+    """
     # range_limits : dict[Mode, util.Limits] = {
     #     Mode.AC_VOLT: util.Limits(1e-1, 1e3),
     #     Mode.AC_CURR: util.Limits(1e0, 3e0),
@@ -56,11 +69,23 @@ class Multimeter:
     def __init__(self,
         port : int
     ):
+        """
+        Create the multimeter object.
+
+        Args:
+            port (int): COM port to use
+        """
         self.port = port
         self.connected = False
         self.res : pyvisa.resources.SerialInstrument
 
     def connect(self) -> None:
+        """
+        Connect to the multimeter.
+
+        Raises:
+            Exception: Device not recognized
+        """
         if not self.connected:
             self.res = rm.open_resource(f'ASRL{self.port}::INSTR')
             self.res.data_bits = 7
@@ -79,7 +104,11 @@ class Multimeter:
         self.connected = True
     
     def disconnect(self) -> None:
+        """
+        Disconnect the multimeter.
+        """
         if self.connected:
+            self.res.write('SYST:LOC')
             self.res.close()
 
     def configure(self,
@@ -90,6 +119,18 @@ class Multimeter:
         count : int = 1,
         delay : float | None = None,
     ) -> None:
+        """
+        Configure the multimeter for data collection. Once configured,
+        call read() to take measurements.
+
+        Args:
+            mode (Mode): Operating mode
+            range (Range | float, optional): Measurement range. Defaults to Range.AUTO.
+            resolution (Range | float, optional): Measurement resolution. Defaults to Range.AUTO.
+            auto_zero (bool, optional): Auto zero. Defaults to True.
+            count (int, optional): Samples to collect. Defaults to 1.
+            delay (float | None, optional): Delay after trigger and between samples. Defaults to None.
+        """
         # set mode, range, and resolution
         self.res.write(f'CONF:{str(mode)} {str(range)},{str(resolution)}')
         self.res.write(f'ZERO:AUTO {'ON' if auto_zero else 'OFF'}')
@@ -100,6 +141,13 @@ class Multimeter:
         self.res.write(f'TRIG:SOUR IMM') # set to trigger immediately on READ?
 
     def read(self) -> list[float]:
+        """
+        Take measurement. The multimeter should first be configured
+        with configure().
+
+        Returns:
+            list[float]: list of reading(s)
+        """
         data = self.res.query_ascii_values('READ?')
         return data
     
@@ -108,6 +156,17 @@ class Multimeter:
         range : Range = Range.AUTO,
         resolution : Range = Range.AUTO
     ) -> float:
+        """
+        Take a one-off measurement.
+
+        Args:
+            mode (Mode): Operating mode
+            range (Range, optional): Measurement range. Defaults to Range.AUTO.
+            resolution (Range, optional): Measurement resolution. Defaults to Range.AUTO.
+
+        Returns:
+            float: measured value
+        """
         print(f'MEAS:{str(mode)}? {str(range)},{str(resolution)}')
         return float(self.res.query(f'MEAS:{str(mode)}? {str(range)},{str(resolution)}'))
 

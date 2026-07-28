@@ -1,3 +1,7 @@
+"""
+Classes for communication between threads in flash control
+"""
+
 from dataclasses import dataclass
 from PyQt6.QtCore import QObject, QRunnable, pyqtSignal, pyqtSlot
 
@@ -8,6 +12,9 @@ from control.data import (
 
 @dataclass
 class RampParams:
+    """
+    Ramping configuration
+    """
     ramp: bool
     start: float
     end: float
@@ -15,12 +22,18 @@ class RampParams:
 
 @dataclass
 class PulseParams:
+    """
+    Pulse configuration
+    """
     pulse: bool
     period: float
     duty_cycle: float
 
 @dataclass
 class Params:
+    """
+    Flash experiment parameters from GUI.
+    """
     ramp_data: RampParams | None
     pulse_data: PulseParams | None
     e_field: float
@@ -31,6 +44,9 @@ class Params:
     freq: float | None = None
 
 class GuiSignals(QObject):
+    """
+    Signals from GUI
+    """
     connectSig = pyqtSignal(str, str) # addr, filepath
     disconnectSig = pyqtSignal()
     setParamsSig = pyqtSignal(Params)
@@ -39,9 +55,15 @@ class GuiSignals(QObject):
     exitSig = pyqtSignal()
 
 class SampleSignals(QObject):
+    """
+    Signals from thread handling data sampling
+    """
     newDataSig = pyqtSignal(SamplerData)
 
 class ControlSignals(QObject):
+    """
+    Signals from control thread
+    """
     newDataSig = pyqtSignal(SamplerData)
 
     connectingSig = pyqtSignal()

@@ -32,6 +32,11 @@ PULSE_PRIORITY = 1
 
 
 class ProcessRunner(Thread):
+    """
+    Generic segmented process controller. Uses functions passed as
+    arguments to ramp or hold set points. Also capable of pulsed
+    operation.
+    """
     def __init__(self,
                 segs : list[Segment],
                 start_value : float,
@@ -39,6 +44,16 @@ class ProcessRunner(Thread):
                 interface : Interface,
                 sample : SampleConf
     ):
+        """
+        Initialize the process thread.
+
+        Args:
+            segs (list[Segment]): list of process segments
+            start_value (float): initial setpoint
+            pulse (PulseConf): pulse configuration
+            interface (Interface): functions and object used to interface with the process
+            sample (SampleConf): data collection configuration
+        """
         # TODO start value?
         # TODO end behavior?
         super().__init__()
@@ -95,6 +110,13 @@ class ProcessRunner(Thread):
         sys.exit() # close thread
 
     def schedule_next_move(self, sc : sched.scheduler):
+        """
+        Determine when next setpoint change needs to occur, based
+        on current segment. Schedule the next change. For internal use.
+
+        Args:
+            sc (sched.scheduler): scheduler
+        """
         # TODO maybe use enterabs with target time for less drift
         if self.paused:
             # if we are paused, don't schedule next move
@@ -110,6 +132,15 @@ class ProcessRunner(Thread):
                 sc.enter(self.segs[self.idx].time, 1, self.hold_end, (sc, time.monotonic()))
 
     def ramp(self, sc : sched.scheduler, last : float):
+        """
+        Increment setpoint towards target based on rate. If target has
+        been reached, advance to next segment. Finally, schedule the next change.
+        Called at each ramp time step. For internal use.
+
+        Args:
+            sc (sched.scheduler): scheduler
+            last (float): time of last change
+        """
         elapsed = time.monotonic() - last
         val : float
         with self.interface.lock:
@@ -133,11 +164,27 @@ class ProcessRunner(Thread):
         self.schedule_next_move(sc) # schedule next change
 
     def hold_end(self, sc : sched.scheduler):
+        """
+        Advance to the next segment then schedule the next change.
+        Called at the end of a hold. For internal use.
+
+        Args:
+            sc (sched.scheduler): scheduler
+        """
         # a hold has ended
         self.idx += 1 # go to next segment
         self.schedule_next_move(sc) # schedule next change
 
     def pulse(self, sc : sched.scheduler, target_time : float):
+        """
+        Toggle pulse state, then schedule next pulse change based on
+        period and duty cycle. Called when pulse change should occur.
+        For internal use.
+
+        Args:
+            sc (sched.scheduler): scheduler
+            target_time (float): time this pulse was scheduled for
+        """
         delay = 0
         match self.pulse_state:
             case PulseState.LOW:
@@ -154,31 +201,42 @@ class ProcessRunner(Thread):
         sc.enterabs(target_time + delay, 1, self.pulse, (sc, target_time + delay))
 
     def sample(self, sc : sched.scheduler, target_time : float):
-            # print('sample!')
-            with self.interface.lock:
-                raw = self.interface.meas()
-            area = 0.25 * math.pi * self.diameter * self.diameter
+        """
+        Take a measurement, process it, then forward it to control thread
+        and data queue. Called at regular intervals for sampling.
+        For internal use.
 
-            processed = SamplerData(
-                voltage=raw.voltage,
-                current=raw.current,
-                power=raw.power,
-                e_field=raw.voltage / self.height,
-                curr_density=raw.current / area,
-                power_density=raw.power / area,
-                timestamp=raw.timestamp,
-                time=raw.time - self.start_time,
-                temperature=random.randint(0, 100), # TODO measure temperature?
-                payload=raw.payload
-            )
+        For now, only supports flash experiments.
 
-            # send to control to forward to gui
-            self.sample_signals.newDataSig.emit(processed)
-            # send to queue for saving
-            self.data_queue.put(processed)
+        Args:
+            sc (sched.scheduler): scheduler
+            target_time (float): time this sample was scheduled for
+        """
+        # print('sample!')
+        with self.interface.lock:
+            raw = self.interface.meas()
+        area = 0.25 * math.pi * self.diameter * self.diameter
 
-            # check event to see if we should continue
-            if not self.events.stop.is_set():
-                # schedule next sample
-                next_time = target_time + self.sample_interval
-                sc.enterabs(next_time, 1, self.sample, argument=(sc, next_time))
+        processed = SamplerData(
+            voltage=raw.voltage,
+            current=raw.current,
+            power=raw.power,
+            e_field=raw.voltage / self.height,
+            curr_density=raw.current / area,
+            power_density=raw.power / area,
+            timestamp=raw.timestamp,
+            time=raw.time - self.start_time,
+            temperature=random.randint(0, 100), # TODO measure temperature?
+            payload=raw.payload
+        )
+
+        # send to control to forward to gui
+        self.sample_signals.newDataSig.emit(processed)
+        # send to queue for saving
+        self.data_queue.put(processed)
+
+        # check event to see if we should continue
+        if not self.events.stop.is_set():
+            # schedule next sample
+            next_time = target_time + self.sample_interval
+            sc.enterabs(next_time, 1, self.sample, argument=(sc, next_time))
