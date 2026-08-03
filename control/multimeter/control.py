@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from threading import Thread, Event
 from queue import SimpleQueue
 from PyQt6.QtCore import QEventLoop, QRunnable
+from pyvisa import VisaIOError
 
 from control.saver import (
     SaveRunner
@@ -82,11 +83,14 @@ class ControlRunner(QRunnable):
         """
         self.signals.connectingSig.emit()
 
-        self.mm = multimeter.Multimeter(port)
-        self.mm.connect()
-        self.status.connected = True
+        try:
+            self.mm = multimeter.Multimeter(port)
+            self.mm.connect()
+            self.status.connected = True
+            self.signals.connectedSig.emit()
+        except VisaIOError as e:
+            self.signals.errorSig.emit('Connection Error', str(e))
 
-        self.signals.connectedSig.emit()
 
     def disconnect(self):
         """

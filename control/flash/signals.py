@@ -84,3 +84,5 @@ class ControlSignals(QObject):
 
     stoppingSig = pyqtSignal()
     stoppedSig = pyqtSignal()
+
+    errorSig = pyqtSignal(str, str) # title, text

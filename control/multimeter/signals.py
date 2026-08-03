@@ -51,6 +51,8 @@ class ControlSignals(QObject):
     stoppingSig = pyqtSignal()
     stoppedSig = pyqtSignal()
 
+    errorSig = pyqtSignal(str, str) # title, text
+
 class SampleSignals(QObject):
     """
     Signals from sampler thread

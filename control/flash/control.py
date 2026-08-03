@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from queue import SimpleQueue, Empty
 from threading import Lock, Event
+from pyvisa import VisaIOError
 import math
 import time
 
@@ -119,15 +120,18 @@ class ControlRunner(QRunnable):
         """
         self.signals.connectingSig.emit()
 
-        with self.supply_lock:
-            if self.supply is None:
-                match self.supply_type:
-                    case SupplyType.DC:
-                        self.supply = DCSupply(addr)
-                    case SupplyType.AC:
-                        self.supply = ACSupply(addr)
-            self.supply.connect()
-            time.sleep(1)
+        try:
+            with self.supply_lock:
+                if self.supply is None:
+                    match self.supply_type:
+                        case SupplyType.DC:
+                            self.supply = DCSupply(addr)
+                        case SupplyType.AC:
+                            self.supply = ACSupply(addr)
+                self.supply.connect()
+                time.sleep(1)
+        except VisaIOError as e:
+            self.signals.errorSig.emit('Connection Error', str(e))
 
         self.filepath = filepath
         self.save_thread = SaveRunner(self.filepath, '', self.data_queue, self.stop_event,)

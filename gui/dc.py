@@ -112,6 +112,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         )
         
         # set up control signal listeners
+        self.control_thread.signals.errorSig.connect(self.error)
         self.control_thread.signals.newDataSig.connect(self.receiveData)
         self.control_thread.signals.connectingSig.connect(self.connecting)
         self.control_thread.signals.connectedSig.connect(self.connected)
@@ -377,6 +378,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     ###########################
     # control signal handlers #
     ###########################
+
+    def error(self, title : str, text : str):
+        """
+        Handles error messages from the control thread. Displays
+        errors in a pop up message box.
+
+        Args:
+            title (str): title
+            text (str): description
+        """
+        QMessageBox.critical(None, title, text)
 
     def receiveData(self, data : SamplerData):
         """
