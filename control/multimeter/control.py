@@ -105,13 +105,14 @@ class ControlRunner(QRunnable):
         threads. 
 
         Args:
-            conf (Config): _description_
+            conf (Config): configuration
         """
         self.signals.startingSig.emit()
+        self.stop_event.clear()
 
         self.save_thread = SaveRunner(
             filepath=conf.filepath,
-            memo=conf.filepath,
+            memo=conf.memo,
             data_queue=self.data_queue,
             stop_event=self.stop_event,
         )
@@ -120,6 +121,7 @@ class ControlRunner(QRunnable):
             multimeter=self.mm,
             config=conf,
             stop_event=self.stop_event,
+            data_queue=self.data_queue,
             sample_signals=self.sample_signals
         )
 

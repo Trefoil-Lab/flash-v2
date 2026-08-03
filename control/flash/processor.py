@@ -9,6 +9,9 @@ from control.flash.process import (
     Segment,
     SegmentType,
     PulseConf,
+    PulseMode,
+    PulseConfNative,
+    PulseConfEmulated,
     PulseState,
     Interface,
     SampleConf
@@ -40,7 +43,7 @@ class ProcessRunner(Thread):
     def __init__(self,
                 segs : list[Segment],
                 start_value : float,
-                pulse : PulseConf,
+                pulse : PulseConfNative | PulseConfEmulated,
                 interface : Interface,
                 sample : SampleConf
     ):
@@ -50,7 +53,7 @@ class ProcessRunner(Thread):
         Args:
             segs (list[Segment]): list of process segments
             start_value (float): initial setpoint
-            pulse (PulseConf): pulse configuration
+            pulse (PulseConfNative | PulseConfEmulated): pulse configuration
             interface (Interface): functions and object used to interface with the process
             sample (SampleConf): data collection configuration
         """
@@ -61,7 +64,7 @@ class ProcessRunner(Thread):
         self.segs = segs
         self.pulse_data = pulse
         self.start_value = start_value
-        self.pulse_state = PulseState.LOW # TODO
+        self.pulse_state = PulseState.LOW
         self.interface = interface
         self.events = interface.events
         self.sample_interval = sample.interval
@@ -82,8 +85,19 @@ class ProcessRunner(Thread):
         )
 
         self.interface.set_val(self.start_value)
-        self.pulse(sc, time.monotonic())
         self.schedule_next_move(sc)
+
+        # set up pulsing
+        if self.pulse_data.pulse:
+            match self.pulse_data.mode:
+                case PulseMode.NATIVE:
+                    self.pulse_data.pulse_setup(
+                        self.pulse_data.value,
+                        self.pulse_data.period,
+                        self.pulse_data.duty_cycle
+                    )
+                case PulseMode.EMULATED:
+                    self.pulse(sc, time.monotonic())
 
         while not self.events.stop.is_set():
 
@@ -188,12 +202,12 @@ class ProcessRunner(Thread):
         delay = 0
         match self.pulse_state:
             case PulseState.LOW:
-                self.interface.pulse_on(self.pulse_data.value)
+                self.pulse_data.pulse_up(self.pulse_data.value)
                 self.pulse_state = PulseState.HIGH
                 # stay high for duty_cycle * period
                 delay = self.pulse_data.duty_cycle * self.pulse_data.period
             case PulseState.HIGH:
-                self.interface.pulse_off()
+                self.pulse_data.pulse_down()
                 self.pulse_state = PulseState.LOW
                 # stay low for (1-duty_cycle) * period
                 delay = (1 - self.pulse_data.duty_cycle) * self.pulse_data.period

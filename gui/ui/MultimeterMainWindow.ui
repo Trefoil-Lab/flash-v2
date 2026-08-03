@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>646</width>
-    <height>459</height>
+    <width>605</width>
+    <height>457</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -61,12 +61,24 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>50</width>
+           <width>80</width>
            <height>0</height>
           </size>
          </property>
+         <property name="frameShape">
+          <enum>QFrame::Shape::Box</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Shadow::Plain</enum>
+         </property>
+         <property name="midLineWidth">
+          <number>0</number>
+         </property>
          <property name="digitCount">
-          <number>7</number>
+          <number>10</number>
+         </property>
+         <property name="segmentStyle">
+          <enum>QLCDNumber::SegmentStyle::Flat</enum>
          </property>
         </widget>
        </item>

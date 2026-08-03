@@ -12,7 +12,7 @@ from PyQt6 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(646, 459)
+        MainWindow.resize(605, 457)
         self.centralwidget = QtWidgets.QWidget(parent=MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -34,8 +34,12 @@ class Ui_MainWindow(object):
         self.horizontalLayout.addItem(spacerItem)
         self.lcdNumber = QtWidgets.QLCDNumber(parent=self.frame)
         self.lcdNumber.setEnabled(False)
-        self.lcdNumber.setMinimumSize(QtCore.QSize(50, 0))
-        self.lcdNumber.setDigitCount(7)
+        self.lcdNumber.setMinimumSize(QtCore.QSize(80, 0))
+        self.lcdNumber.setFrameShape(QtWidgets.QFrame.Shape.Box)
+        self.lcdNumber.setFrameShadow(QtWidgets.QFrame.Shadow.Plain)
+        self.lcdNumber.setMidLineWidth(0)
+        self.lcdNumber.setDigitCount(10)
+        self.lcdNumber.setSegmentStyle(QtWidgets.QLCDNumber.SegmentStyle.Flat)
         self.lcdNumber.setObjectName("lcdNumber")
         self.horizontalLayout.addWidget(self.lcdNumber)
         self.verticalLayout.addWidget(self.frame)

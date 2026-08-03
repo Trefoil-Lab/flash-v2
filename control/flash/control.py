@@ -26,6 +26,8 @@ from control.flash.process import (
     SegmentType,
     Interface,
     PulseConf,
+    PulseConfEmulated,
+    PulseConfNative,
     Events,
     SampleConf
 )
@@ -162,8 +164,9 @@ class ControlRunner(QRunnable):
                 self.supply.setFreq(new_params.freq)
 
         # do we need to update sample interval?
-        if new_params.sample_interval != self.params.sample_interval:
-            self.sample_thread.interval = new_params.sample_interval
+        # TODO
+        # if new_params.sample_interval != self.params.sample_interval:
+        #     self.sample_thread.interval = new_params.sample_interval
         
         ramp_data = self.params.ramp_data
         self.params = new_params
@@ -223,18 +226,18 @@ class ControlRunner(QRunnable):
         self.process_thread = ProcessRunner(
             segs=segs,
             start_value=self.params.curr_density*area,
-            pulse=PulseConf(
+            pulse=PulseConfEmulated(
                 pulse=self.params.pulse_data.pulse,
                 value=self.params.e_field * self.params.height,
                 period=self.params.pulse_data.period / 1000,
-                duty_cycle=self.params.pulse_data.duty_cycle  / 100
+                duty_cycle=self.params.pulse_data.duty_cycle  / 100,
+                pulse_up=self.supply.setV,
+                pulse_down=lambda : self.supply.setV(0),
             ),
             interface=Interface(
                 lock=self.supply_lock,
                 set_val=self.supply.setI,
                 get_val=self.supply.getI,
-                pulse_on=self.supply.setV,
-                pulse_off=lambda : self.supply.setV(0),
                 meas=self.supply.meas,
                 events=Events(
                     self.stop_event,
@@ -252,7 +255,7 @@ class ControlRunner(QRunnable):
         )
 
         # start saving thread
-        self.save_thread = SaveRunner(self.filepath, self.data_queue, self.stop_event, self.supply.getHeader())
+        self.save_thread = SaveRunner(self.filepath, '', self.data_queue, self.stop_event)
         self.save_thread.start()
 
         # start process runner

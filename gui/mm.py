@@ -133,7 +133,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         control thread is connected to the multimeter, issue a
         disconnect signals. Else open a SerialConnectionDialog.
         """
-        self.connectionButton.setDisabled(True) # prevent further presses
+        self.connectionPushButton.setDisabled(True) # prevent further presses
 
         if self.control_thread.status.connected:
             self.signals.disconnectSig.emit()
@@ -160,6 +160,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             folder = self.folderLineEdit.text()
             if not os.path.isdir(folder):
                 QMessageBox.critical(None, 'Error', 'Invalid directory.')
+                self.startStopPushButton.setDisabled(False)
                 return
             
             # build file name
@@ -197,7 +198,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         if file_dialog.exec():
             folder = file_dialog.selectedFiles()[0]
-            self.filePathLineEdit.setText(folder)
+            self.folderLineEdit.setText(folder)
 
     def closeEvent(self, event):
         """
@@ -248,15 +249,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         text of the connection button to be "Disconnect". Displays a
         message on the status bar.
         """
-        self.connectionButton.setDisabled(False)
+        self.connectionPushButton.setDisabled(False)
         self.startStopPushButton.setDisabled(False)
-        self.applyButton.setDisabled(False)
-        with self.control_thread.status_lock:
-            if self.control_thread.status.running:
-                self.stopButton.setDisabled(False)
-            else:
-                self.startStopPushButton.setDisabled(False)
-        self.connectionButton.setText('Disconnect')
+        if self.control_thread.status.running:
+            self.stopButton.setDisabled(False)
+        else:
+            self.startStopPushButton.setDisabled(False)
+        self.connectionPushButton.setText('Disconnect')
         self.statusbar.showMessage('Connected!', 1000)
 
     def disconnecting(self):
@@ -273,9 +272,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         connection button text to "Connect". Shows a message on the
         status bar.
         """
-        self.connectionButton.setDisabled(False)
+        self.connectionPushButton.setDisabled(False)
         self.startStopPushButton.setDisabled(True)
-        self.connectionButton.setText('Connect')
+        self.connectionPushButton.setText('Connect')
         self.statusbar.showMessage('Disconnected!', 1000)
 
     def starting(self):

@@ -62,7 +62,7 @@ class Data(ABC):
     time : float
 
     def __iter__(self):
-        return iter((self.time))
+        return iter((self.time,))
     @property
     @abstractmethod
     def header(self) -> str:
@@ -150,7 +150,7 @@ class SamplerData(Data):
     payload : Payload = None
 
     def __iter__(self):
-        return iter(
+        return iter((
             self.timestamp,
             self.time,
             self.voltage,
@@ -161,7 +161,7 @@ class SamplerData(Data):
             self.power_density,
             self.temperature,
             *self.payload
-        )
+        ))
     @property
     def header(self):
         return FLASH_CSV_HEADER + ',' + self.payload.header
