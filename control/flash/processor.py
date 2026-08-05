@@ -28,7 +28,7 @@ from util.const import (
 )
 
 
-# TODO adjust priorities
+# TODO adjust priorities and actually use them
 SAMPLE_PRIORITY = 1
 MOVE_PRIORITY = 1
 PULSE_PRIORITY = 1
@@ -73,6 +73,14 @@ class ProcessRunner(Thread):
         self.height = sample.height
         self.diameter = sample.diameter
 
+        self.new_segs : list[Segment] = None
+        self.new_start : float | None = None
+        self.new_pulse : PulseConfEmulated | PulseConfNative = None
+        self.new_segs_lock = Lock()
+        self.next_move : sched.Event = None
+        self.next_pulse : sched.Event = None
+        self.update_event = Event()
+
         self.idx = 0
         self.paused = False
 
@@ -89,17 +97,15 @@ class ProcessRunner(Thread):
 
         # set up pulsing
         if self.pulse_data.pulse:
-            match self.pulse_data.mode:
-                case PulseMode.NATIVE:
-                    self.pulse_data.pulse_setup(
-                        self.pulse_data.value,
-                        self.pulse_data.period,
-                        self.pulse_data.duty_cycle
-                    )
-                case PulseMode.EMULATED:
-                    self.pulse(sc, time.monotonic())
+            self.setup_pulse(sc)
 
         while not self.events.stop.is_set():
+
+            if self.update_event.is_set():
+                # if we are told to start again / change segments
+                self.handle_update(sc)
+                    
+                self.update_event.clear()
 
             if not self.paused and self.events.pause.is_set():
                 # we have just now entered pause
@@ -123,6 +129,69 @@ class ProcessRunner(Thread):
         sc.queue.clear() # clear scheduler queue
         sys.exit() # close thread
 
+
+
+    def update(self, segs : list[Segment], pulse : PulseConfEmulated | PulseConfNative, start : float | None = None):
+        """
+        Inform process thread to update segments continue with the
+        first segment. If start is None, start from current value.
+        Otherwise, set value to start then continue. Intended for external use.
+
+        Args:
+            segs (list[Segment]): new segments
+        """ 
+        with self.new_segs_lock:
+            self.new_segs = segs
+            self.new_pulse = pulse
+            self.new_start = start
+        self.update_event.set()
+
+    def handle_update(self, sc : sched.scheduler):
+        """
+        Handle updates. For internal use.
+
+        Args:
+            sc (sched.scheduler): scheduler
+        """
+        with self.new_segs_lock:
+            if not self.new_segs is None:
+                self.segs = self.new_segs
+                self.idx = 0
+                if not self.new_start is None:
+                    with self.interface.lock:
+                        self.interface.set_val(self.start)
+                if not self.next_move is None:
+                    sc.cancel(self.next_move) # cancel old next move
+
+            if not self.new_pulse is None:
+                self.pulse_data = self.new_pulse
+                if self.pulse_data.pulse:
+                    self.setup_pulse(sc)
+                else:
+                    with self.interface.lock:
+                        self.pulse_data.pulse_up(self.new_pulse.value)
+                if not self.new_pulse is None:
+                    sc.cancel(self.next_pulse)
+
+        self.schedule_next_move(sc) # schedule next move
+
+    def setup_pulse(self, sc : sched.scheduler):
+        """
+        Setup pulsing. For internal use.
+
+        Args:
+            sc (sched.scheduler): scheduler
+        """
+        match self.pulse_data.mode:
+            case PulseMode.NATIVE:
+                self.pulse_data.pulse_setup(
+                        self.pulse_data.value,
+                        self.pulse_data.period,
+                        self.pulse_data.duty_cycle
+                    )
+            case PulseMode.EMULATED:
+                self.pulse(sc, time.monotonic())
+
     def schedule_next_move(self, sc : sched.scheduler):
         """
         Determine when next setpoint change needs to occur, based
@@ -139,11 +208,11 @@ class ProcessRunner(Thread):
         match self.segs[self.idx].type:
             case SegmentType.RAMP:
                 # we are ramping, so schedule next increment
-                sc.enter(RAMP_INTERVAL_S, 1, self.ramp, (sc, time.monotonic()))
+                self.next_move = sc.enter(RAMP_INTERVAL_S, MOVE_PRIORITY, self.ramp, (sc, time.monotonic()))
             case SegmentType.HOLD:
                 # we are holding
                 self.segs[self.idx].entered = time.monotonic()
-                sc.enter(self.segs[self.idx].time, 1, self.hold_end, (sc, time.monotonic()))
+                self.next_move = sc.enter(self.segs[self.idx].time, MOVE_PRIORITY, self.hold_end, (sc, time.monotonic()))
 
     def ramp(self, sc : sched.scheduler, last : float):
         """
@@ -212,7 +281,7 @@ class ProcessRunner(Thread):
                 # stay low for (1-duty_cycle) * period
                 delay = (1 - self.pulse_data.duty_cycle) * self.pulse_data.period
 
-        sc.enterabs(target_time + delay, 1, self.pulse, (sc, target_time + delay))
+        next_pulse = sc.enterabs(target_time + delay, PULSE_PRIORITY, self.pulse, (sc, target_time + delay))
 
     def sample(self, sc : sched.scheduler, target_time : float):
         """
@@ -253,4 +322,4 @@ class ProcessRunner(Thread):
         if not self.events.stop.is_set():
             # schedule next sample
             next_time = target_time + self.sample_interval
-            sc.enterabs(next_time, 1, self.sample, argument=(sc, next_time))
+            sc.enterabs(next_time, SAMPLE_PRIORITY, self.sample, argument=(sc, next_time))

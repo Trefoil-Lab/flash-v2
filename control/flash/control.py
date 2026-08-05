@@ -168,10 +168,9 @@ class ControlRunner(QRunnable):
                 self.supply.setFreq(new_params.freq)
 
         # do we need to update sample interval?
-        # TODO
-        # if new_params.sample_interval != self.params.sample_interval:
-        #     self.sample_thread.interval = new_params.sample_interval
-        
+        if new_params.sample_interval != self.params.sample_interval:
+            self.process_thread.sample_interval = new_params.sample_interval
+
         ramp_data = self.params.ramp_data
         self.params = new_params
         self.params.ramp_data = ramp_data # preserve ramp data
@@ -190,9 +189,43 @@ class ControlRunner(QRunnable):
             self.signals.setParamsDoneSig.emit()
             return
         
-        self.params.ramp_data = new_params.ramp_data
 
-        self.setParamsDirect(new_params)
+        if not self.status.running:
+            self.params.ramp_data = new_params.ramp_data
+            self.setParamsDirect(new_params)
+        else:
+            if new_params.sample_interval != self.params.sample_interval:
+                self.process_thread.sample_interval = new_params.sample_interval
+
+            area = 0.25 * math.pi * new_params.diameter * new_params.diameter
+
+            segs : list[Segment] = []
+            start : float
+            if new_params.ramp_data.ramp:
+                segs = [
+                    Segment(
+                        type=SegmentType.RAMP,
+                        target=new_params.ramp_data.end * area,
+                        rate=new_params.ramp_data.rate * area,
+                        time=None
+                    ),
+                    Segment(SegmentType.END, None, None, None)
+                ]
+                start = new_params.ramp_data.start * area
+            else:
+                segs = [Segment(SegmentType.END, None, None, None)]
+                start = new_params.curr_density * area
+
+            pulse = PulseConfEmulated(
+                pulse=new_params.pulse_data.pulse,
+                value=new_params.e_field * new_params.diameter,
+                period=new_params.pulse_data.period / 1000,
+                duty_cycle=new_params.pulse_data.duty_cycle / 100,
+                pulse_up=self.supply.setV,
+                pulse_down=lambda : self.supply.setV(0)
+            )
+            self.params = new_params
+            self.process_thread.update(segs, pulse, start)
 
         self.signals.setParamsDoneSig.emit()
 
